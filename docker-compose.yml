@@ -1,0 +1,49 @@
+# Chạy toàn bộ hệ thống:  docker compose up -d --build   ->  http://localhost:8000
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: khanhvan
+      POSTGRES_PASSWORD: khanhvan
+      POSTGRES_DB: khanhvan
+      TZ: Asia/Ho_Chi_Minh
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U khanhvan -d khanhvan"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: { context: ., dockerfile: backend/Dockerfile }
+    environment: &env
+      DATABASE_URL: postgresql://khanhvan:khanhvan@db:5432/khanhvan
+      PG_SUPERUSER_URL: postgresql://khanhvan:khanhvan@db:5432/postgres
+      JWT_SECRET: ${JWT_SECRET:-doi-khoa-bi-mat-nay-truoc-khi-trien-khai}
+      DEV_MODE: ${DEV_MODE:-1}
+      EINVOICE_PROVIDER: ${EINVOICE_PROVIDER:-MOCK}
+      PAYOS_CHECKSUM_KEY: ${PAYOS_CHECKSUM_KEY:-payos-checksum-key-demo}
+      LOCAL_STORAGE_DIR: /data/storage
+    command: sh -c "python -m app.bootstrap && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    volumes:
+      - storage:/data/storage
+    ports:
+      - "8000:8000"
+    depends_on:
+      db: { condition: service_healthy }
+
+  worker:
+    build: { context: ., dockerfile: backend/Dockerfile }
+    environment: *env
+    command: sh -c "python -m app.migrate && python -m app.worker"
+    volumes:
+      - storage:/data/storage
+    depends_on:
+      api: { condition: service_started }
+
+volumes:
+  pgdata:
+  storage:

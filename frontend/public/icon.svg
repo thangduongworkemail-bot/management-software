@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="128" fill="#C51A1B"/>
+  <circle cx="256" cy="256" r="200" fill="none" stroke="#FFFFFF" stroke-width="12" stroke-opacity="0.2"/>
+  <path d="M160 140 L160 372 M160 256 L260 140 M200 210 L310 372" fill="none" stroke="#FFFFFF" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M340 140 L390 372 L440 140" fill="none" stroke="#FFFFFF" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="256" y="440" font-family="Arial, sans-serif" font-size="34" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="4">KHANH VAN POS</text>
+</svg>

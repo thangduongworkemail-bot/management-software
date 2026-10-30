@@ -1,0 +1,22 @@
+{
+  "name": "Hệ thống Quản lý và Bán hàng Nội thất Khanh Vân",
+  "short_name": "KhanhVân POS",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#F1F5F9",
+  "theme_color": "#C51A1B",
+  "description": "Hệ thống Quản lý và Bán hàng Nội thất gỗ Khanh Vân - Đề án Chuyển đổi số ĐHBK Hà Nội",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "hust-banner.png",
+      "sizes": "774x148",
+      "type": "image/png"
+    }
+  ]
+}

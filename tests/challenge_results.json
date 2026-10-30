@@ -1,0 +1,167 @@
+{
+  "total_probes": 20,
+  "passed": 19,
+  "findings_count": 1,
+  "results": [
+    {
+      "category": "UPDATE",
+      "test_name": "Update Primary Key id",
+      "expected": "Abort",
+      "actual": "IntegrityError",
+      "passed": true,
+      "details": "Blocked: Append-only violation: UPDATE is strictly forbidden on D4_SO_CAI_TON"
+    },
+    {
+      "category": "UPDATE",
+      "test_name": "Update bien_dong",
+      "expected": "Abort",
+      "actual": "IntegrityError",
+      "passed": true,
+      "details": "Blocked: Append-only violation: UPDATE is strictly forbidden on D4_SO_CAI_TON"
+    },
+    {
+      "category": "UPDATE",
+      "test_name": "Update loai_dong",
+      "expected": "Abort",
+      "actual": "IntegrityError",
+      "passed": true,
+      "details": "Blocked: Append-only violation: UPDATE is strictly forbidden on D4_SO_CAI_TON"
+    },
+    {
+      "category": "UPDATE",
+      "test_name": "Update reference & user",
+      "expected": "Abort",
+      "actual": "IntegrityError",
+      "passed": true,
+      "details": "Blocked: Append-only violation: UPDATE is strictly forbidden on D4_SO_CAI_TON"
+    },
+    {
+      "category": "UPDATE",
+      "test_name": "Bulk UPDATE all rows",
+      "expected": "Abort",
+      "actual": "IntegrityError",
+      "passed": true,
+      "details": "Blocked: Append-only violation: UPDATE is strictly forbidden on D4_SO_CAI_TON"
+    },
+    {
+      "category": "UPDATE",
+      "test_name": "Complex subquery UPDATE",
+      "expected": "Abort",
+      "actual": "IntegrityError",
+      "passed": true,
+      "details": "Blocked: Append-only violation: UPDATE is strictly forbidden on D4_SO_CAI_TON"
+    },
+    {
+      "category": "UPDATE",
+      "test_name": "CASE statement UPDATE",
+      "expected": "Abort",
+      "actual": "IntegrityError",
+      "passed": true,
+      "details": "Blocked: Append-only violation: UPDATE is strictly forbidden on D4_SO_CAI_TON"
+    },
+    {
+      "category": "UPDATE",
+      "test_name": "UPSERT ON CONFLICT DO UPDATE",
+      "expected": "Abort",
+      "actual": "IntegrityError",
+      "passed": true,
+      "details": "Blocked: Append-only violation: UPDATE is strictly forbidden on D4_SO_CAI_TON"
+    },
+    {
+      "category": "DELETE",
+      "test_name": "Single-row DELETE by id",
+      "expected": "Abort",
+      "actual": "IntegrityError",
+      "passed": true,
+      "details": "Blocked: Append-only violation: DELETE is strictly forbidden on D4_SO_CAI_TON"
+    },
+    {
+      "category": "DELETE",
+      "test_name": "Conditional multi-row DELETE",
+      "expected": "Abort",
+      "actual": "IntegrityError",
+      "passed": true,
+      "details": "Blocked: Append-only violation: DELETE is strictly forbidden on D4_SO_CAI_TON"
+    },
+    {
+      "category": "DELETE",
+      "test_name": "Bulk DELETE all rows",
+      "expected": "Abort",
+      "actual": "IntegrityError",
+      "passed": true,
+      "details": "Blocked: Append-only violation: DELETE is strictly forbidden on D4_SO_CAI_TON"
+    },
+    {
+      "category": "DELETE",
+      "test_name": "Subquery DELETE",
+      "expected": "Abort",
+      "actual": "IntegrityError",
+      "passed": true,
+      "details": "Blocked: Append-only violation: DELETE is strictly forbidden on D4_SO_CAI_TON"
+    },
+    {
+      "category": "REPLACE",
+      "test_name": "INSERT OR REPLACE (recursive_triggers=ON)",
+      "expected": "Abort",
+      "actual": "IntegrityError",
+      "passed": true,
+      "details": "Blocked by recursive DELETE trigger: Append-only violation: DELETE is strictly forbidden on D4_SO_CAI_TON"
+    },
+    {
+      "category": "REPLACE",
+      "test_name": "REPLACE INTO (recursive_triggers=ON)",
+      "expected": "Abort",
+      "actual": "IntegrityError",
+      "passed": true,
+      "details": "Blocked by recursive DELETE trigger: Append-only violation: DELETE is strictly forbidden on D4_SO_CAI_TON"
+    },
+    {
+      "category": "REPLACE",
+      "test_name": "INSERT OR REPLACE (recursive_triggers=OFF)",
+      "expected": "Blocked",
+      "actual": "Allowed",
+      "passed": false,
+      "details": "CAVEAT: SQLite default connection (recursive_triggers=OFF) permits REPLACE conflict resolution to delete row without triggering trg_d4_prevent_delete"
+    },
+    {
+      "category": "TRANSACTION",
+      "test_name": "TX Rollback on Abort",
+      "expected": "Rollback",
+      "actual": "Clean Rollback",
+      "passed": true,
+      "details": "Trigger abort cleanly rolled back; zero orphaned rows"
+    },
+    {
+      "category": "TRANSACTION",
+      "test_name": "Batch executescript injection",
+      "expected": "Abort",
+      "actual": "IntegrityError",
+      "passed": true,
+      "details": "Blocked during batch execution: Append-only violation: UPDATE is strictly forbidden on D4_SO_CAI_TON"
+    },
+    {
+      "category": "APPEND",
+      "test_name": "Valid append operation",
+      "expected": "Success",
+      "actual": "Success (id=4)",
+      "passed": true,
+      "details": "Valid append succeeded with assigned id=4"
+    },
+    {
+      "category": "IMMUTABILITY",
+      "test_name": "Update newly appended row",
+      "expected": "Abort",
+      "actual": "IntegrityError",
+      "passed": true,
+      "details": "Blocked: Append-only violation: UPDATE is strictly forbidden on D4_SO_CAI_TON"
+    },
+    {
+      "category": "IMMUTABILITY",
+      "test_name": "Delete newly appended row",
+      "expected": "Abort",
+      "actual": "IntegrityError",
+      "passed": true,
+      "details": "Blocked: Append-only violation: DELETE is strictly forbidden on D4_SO_CAI_TON"
+    }
+  ]
+}

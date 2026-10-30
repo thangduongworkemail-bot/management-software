@@ -1,0 +1,10 @@
+**/node_modules
+**/.venv
+**/__pycache__
+frontend/dist
+backend/storage
+.impeccable_repo
+.gemini
+.agents
+.review
+*.db
