@@ -1,0 +1,16 @@
+node_modules/
+frontend/dist/
+.venv/
+__pycache__/
+.pytest_cache/
+backend/storage/
+backend/.env
+*.db
+
+# Công cụ & dữ liệu cục bộ, không thuộc mã nguồn
+.tools/
+.review/
+.impeccable_repo/
+.gemini/
+.agents/
+.claude/

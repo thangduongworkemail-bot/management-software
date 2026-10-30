@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Chữ to, chạm dễ: thiết kế cho người lớn tuổi ít dùng máy tính */
+html { font-size: 17px; }
+body { @apply bg-than-nhat text-than antialiased; }
+
+@layer components {
+  .the { @apply bg-white border border-slate-300 rounded-xl p-4; }
+  .nut { @apply inline-flex items-center justify-center gap-2 min-h-[48px] px-5 rounded-lg font-bold transition
+         disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2; }
+  .nut-do { @apply nut bg-do text-white hover:bg-do-dam focus-visible:outline-do; }
+  .nut-vien { @apply nut bg-white text-than border border-than hover:bg-than-nhat focus-visible:outline-than; }
+  .nut-nho { @apply min-h-[40px] px-3 text-sm; }
+  .o-nhap { @apply w-full min-h-[48px] px-4 bg-white border border-slate-400 rounded-lg font-semibold
+            focus:outline-none focus:ring-2 focus:ring-do focus:border-do; }
+  .nhan { @apply block text-sm font-bold mb-1; }
+  .tieu-de { @apply text-xl font-extrabold; }
+  .huy-hieu { @apply inline-block px-2 py-0.5 rounded-md text-xs font-bold whitespace-nowrap; }
+  .huy-hieu-tot { @apply huy-hieu bg-emerald-50 text-emerald-800 border border-emerald-300; }
+  .huy-hieu-canh-bao { @apply huy-hieu bg-amber-50 text-amber-900 border border-amber-300; }
+  .huy-hieu-loi { @apply huy-hieu bg-do text-white; }
+  .huy-hieu-xam { @apply huy-hieu bg-than-nhat text-than border border-slate-300; }
+  .bang { @apply w-full text-left text-sm; }
+  .bang th { @apply p-3 bg-than-nhat text-xs font-extrabold uppercase border-b border-slate-300; }
+  .bang td { @apply p-3 border-b border-slate-200 align-top; }
+  .bang td.text-right { @apply whitespace-nowrap; }
+}
+
+@media print {
+  .khong-in { display: none !important; }
+  body { background: white; }
+}
