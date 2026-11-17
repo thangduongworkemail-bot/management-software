@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 
@@ -124,8 +126,13 @@ def sync_don_hang(body: DayDon, nguoi: NguoiDung = Depends(nhan_vien_ban_hang)):
 
 
 # --- File (ảnh biên lai, chứng từ, ảnh mẫu) -----------------------------------
+_DUOI_ANH = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+
+
 @router.post("/files/presign")
 def xin_url_tai_len(body: XinUrl, _: NguoiDung = Depends(nguoi_dung)):
+    if body.muc_dich == "anh-mau" and Path(body.ten_file).suffix.lower() not in _DUOI_ANH:
+        raise LoiNghiepVu("FILE_KHONG_PHAI_ANH", "Ảnh minh họa phải là file JPG, PNG, WebP hoặc GIF")
     url = lay_storage().tao_url_tai_len(tao_khoa_file(body.muc_dich, body.ten_file))
     return url.__dict__
 

@@ -166,3 +166,22 @@ def test_sua_bien_the_qua_api_khong_doi_gi(client, chu):
     r = client.patch(f"/api/hang-hoa/bien-the/{bt['id']}", json={"mau_sac": bt["mau_sac"], "hoan_thien": bt["hoan_thien"]},
                      headers=chu)
     assert r.status_code == 400 and r.json()["loi"] == "KHONG_CO_THAY_DOI"
+
+
+def test_anh_minh_hoa_tai_len_gan_va_go(client, chu, tho):
+    # Chỉ nhận file ảnh cho mục đích ảnh mẫu
+    r = client.post("/api/files/presign", json={"ten_file": "trang.html", "muc_dich": "anh-mau"}, headers=chu)
+    assert r.status_code == 400 and r.json()["loi"] == "FILE_KHONG_PHAI_ANH"
+    url = client.post("/api/files/presign", json={"ten_file": "Ke Tivi.JPG", "muc_dich": "anh-mau"}, headers=chu).json()
+    assert url["file_url"].startswith("/files/anh-mau/") and url["file_url"].endswith(".jpg")
+    assert client.put(url["upload_url"], content=b"\xff\xd8\xff anh thu").status_code == 200
+    assert client.get(url["file_url"]).content == b"\xff\xd8\xff anh thu"
+    # Chỉ Chủ được gắn ảnh; đường dẫn lạ bị từ chối
+    duong_dan = "/api/hang-hoa/bien-the/1/anh"
+    assert client.put(duong_dan, json={"anh_url": url["file_url"]}, headers=tho).status_code == 403
+    assert client.put(duong_dan, json={"anh_url": "javascript:alert(1)"}, headers=chu).status_code == 422
+    r = client.put(duong_dan, json={"anh_url": url["file_url"]}, headers=chu)
+    assert r.status_code == 200 and r.json()["anh_url"] == url["file_url"]
+    assert next(h for h in client.get("/api/hang-hoa", headers=tho).json()
+                if h["kieu"] == "BIEN_THE" and h["id"] == 1)["anh_url"] == url["file_url"]
+    assert client.put(duong_dan, json={"anh_url": None}, headers=chu).json()["anh_url"] is None

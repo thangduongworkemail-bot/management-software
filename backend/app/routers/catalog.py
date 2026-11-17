@@ -84,6 +84,11 @@ class XoaBienThe(BaseModel):
     ly_do: str = Field(min_length=3)
 
 
+class DatAnh(BaseModel):
+    """file_url nhận được từ /api/files/presign sau khi tải ảnh lên; null để gỡ ảnh."""
+    anh_url: str | None = Field(max_length=2000, pattern=r"^(/files/|https?://)\S+$")
+
+
 @router.get("/tim-kiem")
 def tim_kiem(q: str, gioi_han: int = 20, nguoi: NguoiDung = Depends(nguoi_dung)):
     bat_dau = time.perf_counter()
@@ -167,6 +172,18 @@ def xoa_bien_the(bien_the_id: int, body: XoaBienThe, nguoi: NguoiDung = Depends(
 def khoi_phuc_bien_the(bien_the_id: int, nguoi: NguoiDung = Depends(chi_chu)):
     with db.transaction() as conn:
         return catalog.an_gia_noi_bo(catalog.khoi_phuc_bien_the(conn, nguoi, bien_the_id), nguoi)
+
+
+@router.put("/bien-the/{bien_the_id}/anh")
+def dat_anh_bien_the(bien_the_id: int, body: DatAnh, nguoi: NguoiDung = Depends(chi_chu)):
+    with db.transaction() as conn:
+        return catalog.an_gia_noi_bo(catalog.dat_anh(conn, nguoi, "BIEN_THE", bien_the_id, body.anh_url), nguoi)
+
+
+@router.put("/bo/{bo_id}/anh")
+def dat_anh_bo(bo_id: int, body: DatAnh, nguoi: NguoiDung = Depends(chi_chu)):
+    with db.transaction() as conn:
+        return catalog.an_gia_noi_bo(catalog.dat_anh(conn, nguoi, "BO", bo_id, body.anh_url), nguoi)
 
 
 @router.post("/bien-the/{bien_the_id}/gia")

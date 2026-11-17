@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { docKichThuoc, docMotKichThuoc } from './dimension'
 import { tinhTheoBac, tinhTheoChieuDai, tinhTheoDienTich } from './pricing'
+import { chuaTu, moRongDongNghia } from './text'
 
 describe('docMotKichThuoc — khớp backend', () => {
   it.each([
@@ -20,4 +21,15 @@ describe('công thức giá — khớp backend', () => {
   it('làm tròn nửa lên', () => expect(tinhTheoChieuDai(1_333_500, 1000)).toBe(1_334_000))
   it('diện tích + phụ phí', () => expect(tinhTheoDienTich(3_200_000, 1600, 800, 1500, 300_000)).toBe(6_444_000))
   it('bậc', () => expect(tinhTheoBac([{ toi_da_mm: 1600, gia: 7.8e6 }, { toi_da_mm: 1800, gia: 8.5e6 }], 1700)).toBe(8.5e6))
+})
+
+describe('từ đồng nghĩa áp dụng cả phía mặt hàng — khớp f_mo_rong_dong_nghia()', () => {
+  const dongNghia = [{ tu_khoa_cn: 'tu ao', tu_chuan_cn: 'tu quan ao' }, { tu_khoa_cn: 'xoi', tu_chuan_cn: 'soi' }]
+  it('tên theo cách gọi thường được bổ sung tên chuẩn', () =>
+    expect(moRongDongNghia('sp000035 tu ao go lat', dongNghia)).toBe('sp000035 tu ao go lat tu quan ao'))
+  it('chỉ khớp nguyên từ', () => {
+    expect(moRongDongNghia('ke tivi go xoi nga', dongNghia)).toBe('ke tivi go xoi nga soi')
+    expect(moRongDongNghia('xoilau tu aox', dongNghia)).toBe('xoilau tu aox')
+    expect(chuaTu('ban (tu ao) go', 'tu ao')).toBe(true)
+  })
 })

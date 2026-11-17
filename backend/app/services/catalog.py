@@ -40,7 +40,7 @@ _SELECT_BIEN_THE = """
 _SELECT_BO = """
     SELECT 'BO' AS kieu, b.id, b.ma, b.ten, b.ten AS mau_hang, 'Bộ sản phẩm' AS loai_hang, 'bộ' AS don_vi_tinh,
            NULL::text AS loai_go, NULL::int AS dai_mm, NULL::int AS rong_mm, NULL::int AS cao_mm,
-           NULL::text AS mau_sac, FALSE AS dat_theo_kich_thuoc, 0 AS ton_toi_thieu, NULL::text AS anh_url,
+           NULL::text AS mau_sac, FALSE AS dat_theo_kich_thuoc, 0 AS ton_toi_thieu, b.anh_url,
            NULL::int AS mau_hang_id, NULL::int AS loai_hang_id, NULL::text AS hoan_thien, NULL::text AS kieu_dang,
            NULL::text AS vat_lieu_phu, NULL::text AS xuat_xu, NULL::int AS khoi_luong_kg,
            NULL::int AS bao_hanh_thang, b.mo_ta, '{}'::jsonb AS thuoc_tinh,
@@ -247,6 +247,9 @@ def them_dong_nghia(conn, nguoi: NguoiDung, tu_khoa: str, tu_chuan: str) -> dict
            ON CONFLICT (tu_khoa_cn) DO UPDATE SET tu_chuan = EXCLUDED.tu_chuan RETURNING *""",
         (tu_khoa, tu_chuan)).fetchone()
     audit.ghi(conn, nguoi, "THEM_TU_DONG_NGHIA", "TU_DONG_NGHIA", row["id"], sau={"tu_khoa": tu_khoa, "tu_chuan": tu_chuan})
+    # Hàng đặt tên theo cách gọi thường được bổ sung tên chuẩn vào cột tìm kiếm (trigger tính lại khi UPDATE)
+    for bang in ("bien_the", "bo_san_pham"):
+        conn.execute(f"UPDATE {bang} SET tim_kiem = tim_kiem WHERE f_chua_tu(tim_kiem, %s)", (row["tu_khoa_cn"],))
     return row
 
 
@@ -361,6 +364,23 @@ def xoa_bien_the(conn, nguoi: NguoiDung, bien_the_id: int, ly_do: str) -> dict:
     audit.ghi(conn, nguoi, "XOA_BIEN_THE", "BIEN_THE", bien_the_id,
               truoc={"dang_ban": True, "ton_hien_co": bt["ton_hien_co"]}, sau={"dang_ban": False, "ly_do": ly_do})
     return lay_bien_the(conn, bien_the_id)
+
+
+_BANG_ANH = {"BIEN_THE": ("bien_the", "biến thể"), "BO": ("bo_san_pham", "bộ sản phẩm")}
+
+
+def dat_anh(conn, nguoi: NguoiDung, kieu: str, hang_id: int, anh_url: str | None) -> dict:
+    """Gắn, đổi hoặc gỡ (anh_url=None) ảnh minh họa của một biến thể (kieu='BIEN_THE') hoặc bộ (kieu='BO').
+    Biến thể chưa có ảnh riêng thì danh mục hiển thị ảnh của mẫu hàng (mau_hang.anh_url)."""
+    bang, ten = _BANG_ANH[kieu]
+    cu = conn.execute(f"SELECT anh_url FROM {bang} WHERE id = %s FOR UPDATE", (hang_id,)).fetchone()
+    if not cu:
+        raise khong_tim_thay(ten)
+    if cu["anh_url"] != anh_url:
+        conn.execute(f"UPDATE {bang} SET anh_url = %s WHERE id = %s", (anh_url, hang_id))
+        audit.ghi(conn, nguoi, "DOI_ANH", "BO_SAN_PHAM" if kieu == "BO" else "BIEN_THE", hang_id,
+                  truoc={"anh_url": cu["anh_url"]}, sau={"anh_url": anh_url})
+    return lay_bo(conn, hang_id) if kieu == "BO" else lay_bien_the(conn, hang_id)
 
 
 def khoi_phuc_bien_the(conn, nguoi: NguoiDung, bien_the_id: int) -> dict:

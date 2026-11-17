@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { get, post } from '../api'
 import { kichThuoc, ngayGio, thongSo, tien } from '../lib/format'
 import { bao, laChu, xemGiaVon } from '../store'
+import AnhHangHoa from '../components/AnhHangHoa.vue'
 import HopThoai from '../components/HopThoai.vue'
 import SuaHangHoa from '../components/SuaHangHoa.vue'
 
@@ -49,6 +50,11 @@ async function themDongNghia() {
   } catch (e) { bao(e.message, 'loi') }
 }
 
+// Ảnh vừa đổi: cập nhật cả dòng trong bảng lẫn hộp chi tiết đang mở, không tải lại cả danh mục
+function capNhatAnh(h, anhUrl) {
+  for (const x of [chiTiet.value, ...hang.value]) if (x?.kieu === h.kieu && x.id === h.id) x.anh_url = anhUrl
+}
+
 const sua = ref({ mo: false, hang: null })
 async function daLuu(kq) {
   await tai()
@@ -86,9 +92,10 @@ const TEN_GIA = { GIA_VON: 'Giá vốn', GIA_SAN: 'Giá sàn', GIA_NIEM_YET: 'Gi
         <button v-if="laChu()" class="nut-do nut-nho" @click="sua = { mo: true, hang: null }">+ Thêm mặt hàng</button>
       </div>
       <table class="bang">
-        <thead><tr><th>Mã</th><th>Tên & quy cách</th><th v-if="xemGiaVon()" class="text-right">Giá vốn</th><th v-if="xemGiaVon()" class="text-right">Giá sàn</th><th class="text-right text-do">Niêm yết</th><th class="text-center">Khả dụng</th></tr></thead>
+        <thead><tr><th class="w-20">Ảnh</th><th>Mã</th><th>Tên & quy cách</th><th v-if="xemGiaVon()" class="text-right">Giá vốn</th><th v-if="xemGiaVon()" class="text-right">Giá sàn</th><th class="text-right text-do">Niêm yết</th><th class="text-center">Khả dụng</th></tr></thead>
         <tbody>
           <tr v-for="h in hang" :key="`${h.kieu}-${h.id}`" class="hover:bg-than-nhat cursor-pointer" @click="mo(h)">
+            <td><AnhHangHoa :hang="h" @da-doi="(url) => capNhatAnh(h, url)" /></td>
             <td class="font-mono text-xs font-bold">{{ h.ma }}</td>
             <td><div class="font-extrabold">{{ h.ten }} <span v-if="h.kieu === 'BO'" class="huy-hieu-xam">BỘ</span></div>
               <div class="text-xs text-slate-600">{{ [h.loai_go && `Gỗ ${h.loai_go}`, h.hoan_thien, kichThuoc(h)].filter(Boolean).join(' • ') }}</div></td>
@@ -107,6 +114,7 @@ const TEN_GIA = { GIA_VON: 'Giá vốn', GIA_SAN: 'Giá sàn', GIA_NIEM_YET: 'Gi
           <span class="text-sm font-mono font-bold">{{ chiTiet.ma }}</span>
           <button v-if="laChu() && chiTiet.kieu === 'BIEN_THE'" class="nut-vien nut-nho" @click="sua = { mo: true, hang: chiTiet }">Sửa thông tin</button>
         </div>
+        <AnhHangHoa :hang="chiTiet" lon @da-doi="(url) => capNhatAnh(chiTiet, url)" />
         <p v-if="chiTiet.mo_ta && chiTiet.kieu === 'BIEN_THE'" class="text-sm">{{ chiTiet.mo_ta }}</p>
         <dl v-if="chiTiet.kieu === 'BIEN_THE'" class="grid grid-cols-[auto_1fr] text-sm border border-slate-200 rounded-lg overflow-hidden">
           <template v-for="([nhan, gt], i) in thongSo(chiTiet)" :key="nhan">

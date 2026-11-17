@@ -4,24 +4,43 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Coursework project (Đại học Bách Khoa Hà Nội): POS, multi-workshop inventory, two-way debt and e-invoicing for the "Nội thất Khanh Vân" furniture store. All UI text and identifiers are Vietnamese (no diacritics in code: `don_hang`, `ton_kha_dung`, `nguoi`), and the user communicates in Vietnamese. The root folder is not a git repository.
+Coursework project (Đại học Bách Khoa Hà Nội): POS, multi-workshop inventory, two-way debt and e-invoicing for the "Nội thất Khanh Vân" furniture store. All UI text and identifiers are Vietnamese (no diacritics in code: `don_hang`, `ton_kha_dung`, `nguoi`), and the user communicates in Vietnamese. The folder is a git repo (branch `main`).
 
 There are two generations side by side:
 
-- **v2 (current)**: `database/`, `backend/`, `frontend/`, `docker-compose.yml`, `scripts/`, documented in `HUONG_DAN_V2.md`. PostgreSQL 17 + FastAPI + a separate Retry Worker + a Vue 3 PWA.
-- **Legacy prototype** at the root: `server.py` (stdlib HTTP + SQLite `khanhvan.db`), `index.html` (static 11-screen mockup), `sw.js`, `tests/`. Built by Antigravity. Leave it alone unless asked. `README_PROTOTYPE_V1.md` describes the legacy version; `README.md` describes the whole repo (v2 first).
+- **v2 (current)**: `database/`, `backend/`, `frontend/`, `docker-compose.yml`, `scripts/`, documented in `HUONG_DAN_V2.md` and `README.md`. PostgreSQL 17 + FastAPI + a separate Retry Worker + a Vue 3 PWA.
+- **Legacy prototype** at the root: `server.py` (stdlib HTTP on port 5500 + SQLite `khanhvan.db`), `index.html` (static 11-screen mockup), `sw.js`, `tests/` (stdlib unittest suites that drive a running `server.py`, e.g. `python tests\test_e2e.py`). Built by Antigravity. Leave it alone unless asked. `README_PROTOTYPE_V1.md` describes it.
 
-## Commands (Windows; PostgreSQL 17 is a local service, superuser `postgres`/`postgres`)
+## Python environment: always use the conda env `ai_signal`
+
+Run every Python command for this project with `C:\ProgramData\miniconda3\envs\ai_signal\python.exe` (Python 3.11), never `backend\.venv` or a bare `python`. `conda` is not on PATH, so call the interpreter by full path (Bash: `/c/ProgramData/miniconda3/envs/ai_signal/python.exe`).
+
+- `scripts\setup.ps1`, `start.ps1`, `test.ps1` and `demo-public.ps1` hard-code `backend\.venv\Scripts\python`, so don't run them as-is; run the equivalent commands below instead (`npm` steps from those scripts are fine).
+- `ai_signal` is a shared env whose package versions differ from the pins in `backend/requirements.txt` (FastAPI 0.141 vs 0.115.12, pytest 9 vs 8.3.5); the whole suite passes on it. The other backend deps were installed into it at their pinned versions. Ask the user before installing anything else, and don't `pip install -r requirements.txt` into it, since that would downgrade packages. It is Python 3.11, so avoid 3.12-only features (e.g. `f"{Fraction(...):.3f}"`).
+- PostgreSQL 17 is installed as the Windows service `postgresql-x64-17` (`C:\Program Files\PostgreSQL\17\bin`).
+
+## Commands
+
+PostgreSQL 17 is expected on `localhost:5432` with superuser `postgres`/`postgres` (`PG_SUPERUSER_URL`); the app role/db is `khanhvan`/`khanhvan`. Config comes from env vars, then `backend/.env` (copy of `.env.example`).
 
 ```powershell
-scripts\setup.ps1 [-Reset]      # venv + pip, create role/db, migrate, seed, npm install + build
-scripts\start.ps1               # API (serves the built PWA) + worker -> http://localhost:8000
-scripts\test.ps1                # pytest + vitest
+$py = 'C:\ProgramData\miniconda3\envs\ai_signal\python.exe'; $env:PYTHONIOENCODING = 'utf-8'
+# all from backend/
+& $py -m app.bootstrap [--reset]               # create role+db, migrate, seed; --reset wipes and reseeds
+& $py -m app.migrate                           # apply new migrations only
+& $py -m uvicorn app.main:app --port 8000      # API + built PWA from frontend/dist -> http://localhost:8000 (/docs)
+& $py -m app.worker [--mot-lan | --kiem-tra-toan-ven]   # background jobs (once / integrity check now)
+& $py -m pytest -q
+& $py -m pytest tests/test_business_flows.py::test_lech_tien_va_chap_nhan_giam
+& $py scripts/smoke.py                         # end-to-end check against a running server
+& $py -m app.nhap_kiotviet <file.csv> [--xem-truoc]   # import a KiotViet product export (preview = rollback)
+& $py -X utf8 -m pytest --noconftest tests/test_kiotviet.py tests/test_dimension_parser.py   # pure tests, no DB
 ```
 
-- Backend (run from `backend/`, set `PYTHONIOENCODING=utf-8`): `.venv\Scripts\python -m pytest -q`; a single test: `... -m pytest tests/test_business_flows.py::test_lech_tien_va_chap_nhan_giam`. DB tests rebuild a separate `khanhvan_test` database each session. Each `conn`-fixture test runs inside a transaction that is rolled back, while `test_api.py` commits through the real pool.
-- `python -m app.bootstrap --reset` rebuilds the dev DB and reseeds; `python -m app.worker --mot-lan` runs each worker job once; `python scripts/smoke.py` runs an end-to-end check against a running server.
-- Frontend (from `frontend/`; Node is at `C:\Program Files\nodejs`, which may not be on PATH): `npm run build`, `npm run dev` (Vite on :5173 proxies `/api` and `/ws` to :8000), `npx vitest run`.
+- Tests: `conftest.py` forces `DATABASE_URL=.../khanhvan_test`, `DEV_MODE=1` and the mock e-invoice provider, then rebuilds that database each session. If PostgreSQL is unreachable the DB tests are **skipped, not failed**, so check the skip count. Each `conn`-fixture test runs inside a transaction that is rolled back, while `test_api.py` commits through the real pool.
+- Frontend (from `frontend/`; Node is at `C:\Program Files\nodejs`): `npm run build`, `npm run dev` (Vite on :5173 proxies `/api` and `/ws` to :8000, override with `API_URL`), `npx vitest run`.
+- Docker: `docker compose up -d --build` (build context is the repo root; the image builds the PWA and runs `app.bootstrap` on start).
+- Render: `HUONG_DAN_DEPLOY_RENDER.md`. A single Docker web service runs the API and the worker together, because a Render disk attaches to only one service and the worker writes files. The Docker Command override binds `$PORT`. Set `TZ=ICT-7`, because `codes.py` uses `date.today()`.
 
 ## Architecture that spans files
 
@@ -30,7 +49,7 @@ scripts\test.ps1                # pytest + vitest
   - `so_cai_ton` and `nhat_ky` reject UPDATE/DELETE/TRUNCATE (SQLSTATE `KV001`).
   - `gia_hieu_luc` may only have its open row closed; `dong_don` is an immutable price snapshot except `da_xuat` (`KV002`).
   - The audit hash chain is computed by a BEFORE INSERT trigger. The service passes empty hashes, and the trigger takes an advisory lock and assigns the id *after* the lock.
-  - `bien_the.tim_kiem` is filled by a trigger (unaccented text plus "1800 1m8" size tokens) for trigram search.
+  - `bien_the.tim_kiem` is filled by a trigger (unaccented text plus "1800 1m8" size tokens) for trigram search. Since 006 the trigger also appends the canonical form of any synonym found in the row (`f_mo_rong_dong_nghia`), because the query side replaces colloquial words with canonical ones; `catalog.them_dong_nghia` re-indexes matching rows. `frontend/src/lib/search.js` mirrors this offline.
 - **Stock is never stored**: `v_ton_kho` sums the ledger. Signs are NHAP/TRA_HANG/GIU_CHO positive and XUAT/NHA_CHO negative. Bundles (`bo_san_pham`) are exploded into their components by `inventory.nhu_cau_cua_don`. Before checking or writing stock, always call `inventory.khoa_bien_the()` (row locks in id order).
 - **Services take a `conn` and never commit**. Routers wrap each call in `with db.transaction() as conn:`. Raise `errors.LoiNghiepVu` for business errors, which `main.py` maps to JSON `{loi, thong_bao, chi_tiet}`.
 - **Order lifecycle** (`services/orders.py`): `trang_thai` (payment) and `trang_thai_giao` (delivery) are separate columns. `orders.chot_don()` is the single "sale closed" path. In one transaction it exports stock, writes `phieu_ban_hang` and inserts the `hoa_don_dt` queue row. All payment paths (cash, manual confirm, webhook, device, accept-discount, approval) reach it via `payments.ghi_nhan_thanh_toan` or call it directly.
@@ -43,7 +62,12 @@ scripts\test.ps1                # pytest + vitest
 
 The user also runs Antigravity (Google's agent IDE) on this folder. Claude acts as task manager and reviewer through `TASKS.md` (statuses `TODO → ĐANG LÀM → CHỜ DUYỆT → XONG / CẦN SỬA`; only Claude sets the last two). The tasks currently in it target the legacy `index.html`, and `.review/baseline/` holds the snapshot to diff against. Claude cannot send commands to Antigravity, because the installed build has no prompt CLI.
 
-## Folders to leave alone
+## Real store data
 
-- `.impeccable_repo/` is a vendored third-party design-skill repo, not part of this project.
-- `.gemini/` holds Antigravity/Gemini configuration.
+`data_bo_sung/` holds the store's KiotViet product export. The original CSV was re-saved as Latin-1 and lost its Vietnamese characters (each became `?`); `khoi_phuc_dau.py` rebuilt `*_khoi_phuc.csv` (UTF-8 BOM) from a word dictionary, checked byte-for-byte against the original. Import the restored file, never the original; `domain/kiotviet.py` rejects files with lost accents. Products are imported via `catalog.tao_bien_the`, so prices go through price history and stock becomes a `DIEU_CHINH` ledger row.
+
+## Local-only folders (gitignored, may be absent in a fresh clone)
+
+- `.review/` is the review baseline above; don't modify it.
+- `.tools/` holds `cloudflared.exe` and the logs for `scripts\demo-public.ps1` (Cloudflare quick-tunnel demo).
+- `.impeccable_repo/` is a vendored third-party design-skill repo and `.gemini/` holds Antigravity/Gemini configuration; leave both alone.

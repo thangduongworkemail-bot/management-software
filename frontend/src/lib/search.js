@@ -1,7 +1,7 @@
 // Tìm kiếm ngoại tuyến trên danh mục trong IndexedDB: không dấu, từ đồng nghĩa, token kích thước.
 import { db } from '../db'
 import { docMotKichThuoc } from './dimension'
-import { chuanHoa } from './text'
+import { chuanHoa, moRongDongNghia } from './text'
 
 const RE_KICH_THUOC = /^(\d+m\d+|\d+(?:[.,]\d+)?(?:m|mm|cm))$/
 
@@ -22,7 +22,8 @@ export function chuoiTimKiem(h) {
 export async function timNgoaiTuyen(q, gioiHan = 20) {
   let cn = chuanHoa(q)
   if (!cn) return []
-  for (const { tu_khoa_cn: tk, tu_chuan_cn: tc } of await db.dong_nghia.toArray()) {
+  const dongNghia = await db.dong_nghia.toArray()
+  for (const { tu_khoa_cn: tk, tu_chuan_cn: tc } of dongNghia) {
     if (!cn.includes(tc)) cn = cn.replace(new RegExp(`(?<![\\w])${tk.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w])`, 'g'), tc)
   }
   const tokens = cn.split(' ').map(t => {
@@ -34,7 +35,7 @@ export async function timNgoaiTuyen(q, gioiHan = 20) {
   const tatCa = await db.hang_hoa.toArray()
   return tatCa
     .filter(h => h.dang_ban !== false)
-    .map(h => ({ h, s: chuoiTimKiem(h) }))
+    .map(h => ({ h, s: moRongDongNghia(chuoiTimKiem(h), dongNghia) }))
     .filter(({ s }) => tokens.every(t => s.includes(t)))
     .slice(0, gioiHan)
     .map(({ h }) => h)

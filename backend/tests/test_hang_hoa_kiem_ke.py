@@ -118,3 +118,27 @@ def test_them_xuong_moi_roi_nhap_kho(conn, tho):
     pn = inventory.tao_phieu_nhap(conn, tho, x["id"], [
         {"bien_the_id": id_bien_the(conn, "GHE-AN-SOI"), "so_luong": 2, "gia_von_don_vi": 1_300_000}])
     assert pn["nha_cung_cap_id"] == x["id"]
+
+
+def test_gan_doi_go_anh_minh_hoa_bien_the(conn, chu):
+    bt_id = id_bien_the(conn, "KE-TIVI-MDF-1800")
+    assert catalog.lay_bien_the(conn, bt_id)["anh_url"] is None
+    bt = catalog.dat_anh(conn, chu, "BIEN_THE", bt_id, "/files/anh-mau/2026/11/ke-tivi.jpg")
+    assert bt["anh_url"] == "/files/anh-mau/2026/11/ke-tivi.jpg"
+    catalog.dat_anh(conn, chu, "BIEN_THE", bt_id, "/files/anh-mau/2026/11/ke-tivi-2.jpg")
+    nk = conn.execute("SELECT thuc_the, du_lieu_truoc, du_lieu_sau FROM nhat_ky WHERE hanh_dong = 'DOI_ANH' "
+                      "ORDER BY id DESC LIMIT 1").fetchone()
+    assert nk["thuc_the"] == "BIEN_THE"
+    assert nk["du_lieu_truoc"] == {"anh_url": "/files/anh-mau/2026/11/ke-tivi.jpg"}
+    assert nk["du_lieu_sau"] == {"anh_url": "/files/anh-mau/2026/11/ke-tivi-2.jpg"}
+    assert catalog.dat_anh(conn, chu, "BIEN_THE", bt_id, None)["anh_url"] is None
+
+
+def test_anh_minh_hoa_bo_san_pham_hien_trong_danh_muc(conn, chu):
+    bo_id = conn.execute("SELECT id FROM bo_san_pham WHERE ma = 'BO-BANAN-SOI-1600'").fetchone()["id"]
+    assert catalog.dat_anh(conn, chu, "BO", bo_id, "/files/anh-mau/bo-ban-an.jpg")["anh_url"] == "/files/anh-mau/bo-ban-an.jpg"
+    bo = next(h for h in catalog.danh_sach(conn, chu) if h["ma"] == "BO-BANAN-SOI-1600")
+    assert bo["kieu"] == "BO" and bo["anh_url"] == "/files/anh-mau/bo-ban-an.jpg"
+    with pytest.raises(LoiNghiepVu) as e:
+        catalog.dat_anh(conn, chu, "BO", 999_999, "/files/anh-mau/khong-co.jpg")
+    assert e.value.ma == "KHONG_TIM_THAY"

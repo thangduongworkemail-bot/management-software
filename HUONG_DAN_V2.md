@@ -7,7 +7,8 @@ offline-first. Bản prototype cũ (`server.py`, `index.html`, SQLite) vẫn đ�
 
 ```text
 database/migrations/   DDL PostgreSQL: 001 bảng & ràng buộc, 002 trigger, 003 chỉ mục tìm kiếm & view,
-                       004 thông số hàng hóa chi tiết + thông tin xưởng
+                       004 thông số hàng hóa chi tiết + thông tin xưởng, 005 ảnh minh họa bộ sản phẩm,
+                       006 từ đồng nghĩa áp dụng cả phía mặt hàng khi tìm kiếm
 backend/app/
   domain/              Logic thuần, không phụ thuộc CSDL: đọc kích thước, 3 công thức giá, VietQR
   adapters/            Kết nối ngoài: HĐĐT (Mock/VNPT/Viettel), PayOS, lưu file (Local/S3), thông báo
@@ -75,9 +76,10 @@ docker compose up -d --build     # http://localhost:8000
 | Webhook idempotent | `giao_dich_nh.ma_bam = SHA256(nguồn|mã GD)` UNIQUE + `ON CONFLICT DO NOTHING`; tiền về cho đơn đã xác nhận tay được dùng để đối soát, không ghi thu lần hai |
 | Máy nhận tiền | Ghép bằng mã 6 số (10 phút, dùng một lần) → cấp khóa HMAC riêng; mỗi request ký `HMAC(khoá, "ts.body")`, lệch giờ ≤ 5 phút; thu hồi là vô hiệu ngay |
 | Offline-first | PWA precache giao diện; Dexie lưu danh mục, bảng giá, công thức, từ đồng nghĩa; đơn mất mạng lưu kèm UUID, đồng bộ qua `/api/sync/don-hang`; thiếu hàng khi đồng bộ → `XUNG_DOT_TON`, không tự hủy |
-| Tìm kiếm tiếng Việt < 1 giây | `f_unaccent` IMMUTABLE + cột `tim_kiem` do trigger điền (kèm token "1800 1m8") + GIN `gin_trgm_ops`; từ đồng nghĩa thay trước khi tìm; không khớp đủ từ thì tìm gần đúng bằng `word_similarity` |
+| Tìm kiếm tiếng Việt < 1 giây | `f_unaccent` IMMUTABLE + cột `tim_kiem` do trigger điền (kèm token "1800 1m8") + GIN `gin_trgm_ops`; từ đồng nghĩa thay trong câu tìm và bổ sung tên chuẩn vào `tim_kiem` của hàng đặt tên theo cách gọi thường (006); không khớp đủ từ thì tìm gần đúng bằng `word_similarity` |
 | Thông số hàng hóa | Cột chung (hoàn thiện, kiểu dáng, vật liệu phụ, xuất xứ, khối lượng, bảo hành, đơn vị, mô tả) + `thuoc_tinh` JSONB theo mẫu của nhóm hàng (`loai_hang.thuoc_tinh_mau`, khóa là nhãn tiếng Việt); tìm kiếm phủ cả các thông số này |
 | Kiểm kê, sửa, thêm, xóa hàng | Tab *Kho → Kiểm kê & hàng hóa* (Chủ): nhập số thực đếm, chênh lệch tính dưới khóa rồi ghi `DIEU_CHINH`; sửa mọi thuộc tính (đổi giá vẫn qua lịch sử giá); thêm hàng kèm tồn ban đầu; *xóa* = ngừng bán, tồn còn lại ghi điều chỉnh về 0, có thể khôi phục (không xóa cứng vì sổ cái/đơn cũ tham chiếu) |
+| Nhập danh mục từ KiotViet | `python -m app.nhap_kiotviet <file.csv>`: gom biến thể theo *Mã HH Liên quan*, đoán nhóm hàng theo tên, đọc kích thước từ thuộc tính; giá vào lịch sử giá, tồn kho ghi `DIEU_CHINH` tồn đầu kỳ; một giao dịch, chạy lại không nhập trùng; từ chối file đã mất dấu tiếng Việt |
 | Thêm xưởng khi nhập kho | Nút *+ Xưởng mới* trong phiếu nhập (Chủ và Thợ), mã xưởng tự sinh, chặn trùng tên không dấu |
 | Tiền & kích thước | BIGINT VNĐ, INTEGER mm, hệ số gỗ INTEGER phần nghìn; công thức tính bằng phân số, làm tròn nghìn đồng nửa lên |
 

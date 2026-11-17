@@ -96,7 +96,7 @@ Tài liệu bàn giao chi tiết của bản 2: [HUONG_DAN_V2.md](HUONG_DAN_V2.m
 ## 3. Cấu trúc thư mục
 
 ```text
-database/migrations/      001 bảng & ràng buộc · 002 trigger · 003 chỉ mục tìm kiếm & view · 004 thông số chi tiết
+database/migrations/      001 bảng & ràng buộc · 002 trigger · 003 chỉ mục tìm kiếm & view · 004 thông số chi tiết · 005 ảnh bộ sản phẩm · 006 từ đồng nghĩa hai phía
 backend/
   app/
     domain/               dimension.py, pricing.py, vietqr.py, text.py
@@ -107,6 +107,7 @@ backend/
     worker.py             Retry Worker
     bootstrap.py          tạo role/CSDL, migrate, seed
     seed.py               dữ liệu mẫu
+    nhap_kiotviet.py      nhập danh mục từ file KiotViet (CSV)
   tests/                  pytest
   scripts/smoke.py        kịch bản đầu-cuối trên hệ thống đang chạy
   requirements.txt, Dockerfile, .env.example
@@ -171,6 +172,7 @@ Các lệnh hữu ích khác:
 | `python -m app.worker --mot-lan` | Chạy mỗi tác vụ nền một lần rồi thoát |
 | `python -m app.worker --kiem-tra-toan-ven` | Chạy ngay job kiểm tra toàn vẹn |
 | `python scripts/smoke.py` | Kịch bản đầu-cuối trên hệ thống đang chạy |
+| `python -m app.nhap_kiotviet <file.csv> [--xem-truoc]` | Nhập danh mục hàng hóa xuất từ KiotViet; chạy lại không nhập trùng |
 
 ## 5. Tài khoản và phân quyền
 
@@ -287,6 +289,8 @@ powershell -ExecutionPolicy Bypass -File scripts\demo-public.ps1 -Tat   # tắt
 
 Script cần `cloudflared.exe` trong `.tools/` (không đưa lên git; tải tại trang phát hành của cloudflare/cloudflared).
 Link đổi mỗi lần bật lại và chỉ hoạt động khi máy đang chạy.
+
+Muốn có địa chỉ cố định, chạy cả khi tắt máy: deploy lên Render theo [HUONG_DAN_DEPLOY_RENDER.md](HUONG_DAN_DEPLOY_RENDER.md) (PostgreSQL + một Web Service chạy cả API lẫn Worker).
 
 ## 13. Giới hạn đã biết
 
