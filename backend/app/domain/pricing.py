@@ -6,6 +6,7 @@ kết quả làm tròn đến nghìn đồng (nửa lên).
     Theo bậc       : tra bảng giá cố định theo kích thước chuẩn
 """
 from dataclasses import dataclass, field
+from decimal import Decimal
 from fractions import Fraction
 
 from .text import dinh_dang_tien
@@ -46,12 +47,18 @@ def lam_tron_nghin(gia_tri: Fraction | int) -> int:
     return int(nghin + Fraction(1, 2)) * 1000  # int() cắt về 0, với số dương là làm tròn nửa lên
 
 
+def _phan_nghin_hien_thi(so_nguyen: int) -> str:
+    """1200 -> "1,2"; 2400 -> "2,4". Decimal chính xác như Fraction nhưng định dạng được trên Python 3.11
+    (Fraction chỉ hỗ trợ định dạng ':.3f' từ Python 3.12)."""
+    return f"{Decimal(so_nguyen).scaleb(-3):.3f}".rstrip("0").rstrip(".").replace(".", ",")
+
+
 def _he_so_hien_thi(he_so_phan_nghin: int) -> str:
-    return f"{Fraction(he_so_phan_nghin, 1000):.3f}".rstrip("0").rstrip(".").replace(".", ",")
+    return _phan_nghin_hien_thi(he_so_phan_nghin)
 
 
 def _met_hien_thi(mm: int) -> str:
-    return f"{Fraction(mm, 1000):.3f}".rstrip("0").rstrip(".").replace(".", ",")
+    return _phan_nghin_hien_thi(mm)
 
 
 def tinh_theo_chieu_dai(don_gia_m: int, dai_mm: int, he_so_phan_nghin: int = 1000, phu_phi: int = 0) -> int:
