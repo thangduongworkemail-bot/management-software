@@ -19,7 +19,11 @@ function Dung-TatCa {
 Dung-TatCa
 if ($Tat) { Write-Host 'Đã tắt demo công khai.' -ForegroundColor Yellow; exit }
 
-$py = "$goc\backend\.venv\Scripts\python.exe"
+$py = if ($env:KHANHVAN_PYTHON) { $env:KHANHVAN_PYTHON } else { "$goc\backend\.venv\Scripts\python.exe" }
+# cloudflared: bản tải tay trong .tools\, hoặc bản cài bằng winget (Cloudflare.cloudflared)
+$cf = @("$goc\.tools\cloudflared.exe", (Get-Command cloudflared -ErrorAction SilentlyContinue).Source,
+        "${env:ProgramFiles(x86)}\cloudflared\cloudflared.exe") | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+if (-not $cf) { Write-Host 'Chưa có cloudflared. Cài: winget install --id Cloudflare.cloudflared' -ForegroundColor Red; exit 1 }
 $env:PYTHONIOENCODING = 'utf-8'
 Start-Process -FilePath $py -ArgumentList '-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', '8000', '--proxy-headers' `
   -WorkingDirectory "$goc\backend" -WindowStyle Hidden -RedirectStandardOutput "$log\api.log" -RedirectStandardError "$log\api.err.log"
@@ -31,7 +35,7 @@ for ($i = 0; $i -lt 30; $i++) {
 }
 
 Remove-Item "$log\tunnel.log" -ErrorAction SilentlyContinue
-Start-Process -FilePath "$goc\.tools\cloudflared.exe" -ArgumentList 'tunnel', '--no-autoupdate', '--url', 'http://127.0.0.1:8000', '--logfile', "$log\tunnel.log" `
+Start-Process -FilePath $cf -ArgumentList 'tunnel', '--no-autoupdate', '--url', 'http://127.0.0.1:8000', '--logfile', "$log\tunnel.log" `
   -WindowStyle Hidden
 
 $url = $null

@@ -1,6 +1,7 @@
 ﻿# Khởi chạy API (phục vụ luôn PWA) + Retry Worker.  Mở http://localhost:8000
 $goc = Split-Path -Parent $PSScriptRoot
-$py = "$goc\backend\.venv\Scripts\python.exe"
+# Python của dự án: .venv do setup.ps1 tạo, hoặc env khác đặt qua biến KHANHVAN_PYTHON (vd. conda)
+$py = if ($env:KHANHVAN_PYTHON) { $env:KHANHVAN_PYTHON } else { "$goc\backend\.venv\Scripts\python.exe" }
 $env:PYTHONIOENCODING = 'utf-8'
 $api = Start-Process -FilePath $py -ArgumentList '-m', 'uvicorn', 'app.main:app', '--host', '0.0.0.0', '--port', '8000' `
   -WorkingDirectory "$goc\backend" -PassThru -NoNewWindow

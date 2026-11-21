@@ -287,10 +287,11 @@ powershell -ExecutionPolicy Bypass -File scripts\demo-public.ps1        # chạy
 powershell -ExecutionPolicy Bypass -File scripts\demo-public.ps1 -Tat   # tắt
 ```
 
-Script cần `cloudflared.exe` trong `.tools/` (không đưa lên git; tải tại trang phát hành của cloudflare/cloudflared).
+Script cần cloudflared: cài bằng `winget install --id Cloudflare.cloudflared`, hoặc đặt `cloudflared.exe` trong `.tools/` (không đưa lên git). Máy dùng Python khác `backend\.venv` (ví dụ conda) thì đặt biến `KHANHVAN_PYTHON` là đường dẫn `python.exe`; `start.ps1`, `demo-public.ps1`, `test.ps1` đều đọc biến này.
 Link đổi mỗi lần bật lại và chỉ hoạt động khi máy đang chạy.
 
-Muốn có địa chỉ cố định, chạy cả khi tắt máy: deploy lên Render theo [HUONG_DAN_DEPLOY_RENDER.md](HUONG_DAN_DEPLOY_RENDER.md) (PostgreSQL + một Web Service chạy cả API lẫn Worker).
+Muốn địa chỉ cố định với tên miền riêng, hệ thống vẫn chạy trên máy mình: xem [HUONG_DAN_DEPLOY_CLOUDFLARE.md](HUONG_DAN_DEPLOY_CLOUDFLARE.md) (Cloudflare Tunnel).
+Muốn chạy cả khi tắt máy: deploy lên Render theo [HUONG_DAN_DEPLOY_RENDER.md](HUONG_DAN_DEPLOY_RENDER.md) (PostgreSQL + một Web Service chạy cả API lẫn Worker).
 
 ## 13. Giới hạn đã biết
 

@@ -15,7 +15,7 @@ There are two generations side by side:
 
 Run every Python command for this project with `C:\ProgramData\miniconda3\envs\ai_signal\python.exe` (Python 3.11), never `backend\.venv` or a bare `python`. `conda` is not on PATH, so call the interpreter by full path (Bash: `/c/ProgramData/miniconda3/envs/ai_signal/python.exe`).
 
-- `scripts\setup.ps1`, `start.ps1`, `test.ps1` and `demo-public.ps1` hard-code `backend\.venv\Scripts\python`, so don't run them as-is; run the equivalent commands below instead (`npm` steps from those scripts are fine).
+- `start.ps1`, `test.ps1` and `demo-public.ps1` use `$env:KHANHVAN_PYTHON` when it is set, otherwise `backend\.venv`. Set it to the `ai_signal` interpreter before running them. `setup.ps1` still creates and uses `.venv`, so don't run it here.
 - `ai_signal` is a shared env whose package versions differ from the pins in `backend/requirements.txt` (FastAPI 0.141 vs 0.115.12, pytest 9 vs 8.3.5); the whole suite passes on it. The other backend deps were installed into it at their pinned versions. Ask the user before installing anything else, and don't `pip install -r requirements.txt` into it, since that would downgrade packages. It is Python 3.11, so avoid 3.12-only features (e.g. `f"{Fraction(...):.3f}"`).
 - PostgreSQL 17 is installed as the Windows service `postgresql-x64-17` (`C:\Program Files\PostgreSQL\17\bin`).
 
@@ -40,6 +40,7 @@ $py = 'C:\ProgramData\miniconda3\envs\ai_signal\python.exe'; $env:PYTHONIOENCODI
 - Tests: `conftest.py` forces `DATABASE_URL=.../khanhvan_test`, `DEV_MODE=1` and the mock e-invoice provider, then rebuilds that database each session. If PostgreSQL is unreachable the DB tests are **skipped, not failed**, so check the skip count. Each `conn`-fixture test runs inside a transaction that is rolled back, while `test_api.py` commits through the real pool.
 - Frontend (from `frontend/`; Node is at `C:\Program Files\nodejs`): `npm run build`, `npm run dev` (Vite on :5173 proxies `/api` and `/ws` to :8000, override with `API_URL`), `npx vitest run`.
 - Docker: `docker compose up -d --build` (build context is the repo root; the image builds the PWA and runs `app.bootstrap` on start).
+- Cloudflare Tunnel (the app runs on a local Windows machine, either through a Quick Tunnel from `demo-public.ps1` or a named tunnel with a domain): `HUONG_DAN_DEPLOY_CLOUDFLARE.md`.
 - Render: `HUONG_DAN_DEPLOY_RENDER.md`. A single Docker web service runs the API and the worker together, because a Render disk attaches to only one service and the worker writes files. The Docker Command override binds `$PORT`. Set `TZ=ICT-7`, because `codes.py` uses `date.today()`.
 
 ## Architecture that spans files
