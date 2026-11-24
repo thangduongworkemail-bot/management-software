@@ -1,7 +1,7 @@
 <script setup>
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { post } from '../api'
+import { get, post } from '../api'
 import { laAppGoc, mayChu } from '../nen-tang'
 import { dangNhapXong } from '../store'
 import CaiDatApp from '../components/CaiDatApp.vue'
@@ -20,8 +20,19 @@ const NHANH = [
   { ten: 'admin', nhan: 'Quản trị viên', mk: 'Admin@2026', mo_ta: 'Tài khoản, thiết bị, nhật ký hệ thống.' },
 ]
 const chon = ref(null)
+// Nút chọn nhanh tài khoản demo chỉ hiện khi máy chủ chạy DEV_MODE=1; chạy thật thì ẩn.
+const cheDoDemo = ref(false)
 // App Android/iOS: chưa có máy chủ, hoặc người dùng bấm "Đổi máy chủ"
 const chonMayChu = ref(laAppGoc && (!mayChu.goc || route.query.doi_may_chu === '1'))
+
+async function hoiCheDoDemo() {
+  try {
+    cheDoDemo.value = (await get('/suc-khoe')).che_do_demo === true
+  } catch {
+    cheDoDemo.value = false
+  }
+}
+onMounted(hoiCheDoDemo)
 
 function chonNhanh(t) {
   chon.value = t
@@ -66,15 +77,18 @@ async function dangNhap() {
     <section v-if="chonMayChu" class="p-5 sm:p-6 lg:p-14 flex flex-col justify-start lg:justify-center gap-5 bg-white dem-duoi-an-toan">
       <h2 class="tieu-de">Kết nối máy chủ cửa hàng</h2>
       <p class="text-sm">Lần đầu mở app trên máy này: nhập địa chỉ máy chủ mà máy tính quầy đang dùng. Chỉ cần làm một lần.</p>
-      <ChonMayChu @xong="chonMayChu = false" />
+      <ChonMayChu @xong="chonMayChu = false; hoiCheDoDemo()" />
     </section>
     <section v-else class="p-5 sm:p-6 lg:p-14 flex flex-col justify-start lg:justify-center gap-5 bg-white dem-duoi-an-toan">
-      <h2 class="tieu-de">Chọn nhanh tài khoản demo</h2>
-      <div class="grid sm:grid-cols-3 gap-3">
-        <button v-for="t in NHANH" :key="t.ten" type="button" :aria-pressed="chon?.ten === t.ten"
-          :class="chon?.ten === t.ten ? 'nut-do' : 'nut-vien'" @click="chonNhanh(t)">{{ t.nhan }}</button>
-      </div>
-      <p v-if="chon" class="bg-than-nhat rounded-lg p-3 text-sm font-semibold">{{ chon.mo_ta }}</p>
+      <template v-if="cheDoDemo">
+        <h2 class="tieu-de">Chọn nhanh tài khoản demo</h2>
+        <div class="grid sm:grid-cols-3 gap-3">
+          <button v-for="t in NHANH" :key="t.ten" type="button" :aria-pressed="chon?.ten === t.ten"
+            :class="chon?.ten === t.ten ? 'nut-do' : 'nut-vien'" @click="chonNhanh(t)">{{ t.nhan }}</button>
+        </div>
+        <p v-if="chon" class="bg-than-nhat rounded-lg p-3 text-sm font-semibold">{{ chon.mo_ta }}</p>
+      </template>
+      <h2 v-else class="tieu-de">Đăng nhập</h2>
       <form class="space-y-4" @submit.prevent="dangNhap">
         <div>
           <label class="nhan" for="ten">Tài khoản</label>

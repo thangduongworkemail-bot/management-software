@@ -78,7 +78,7 @@ Bấm **Add Environment Variable** cho từng dòng:
 | Key | Value | Ghi chú |
 |---|---|---|
 | `DATABASE_URL` | dán **Internal Database URL** ở bước 1 | Bắt buộc |
-| `JWT_SECRET` | bấm **Generate**, hoặc gõ chuỗi ngẫu nhiên ≥ 32 ký tự | Bắt buộc. Đổi giá trị này thì mọi người phải đăng nhập lại |
+| `JWT_SECRET` | bấm **Generate**, hoặc gõ chuỗi ngẫu nhiên ≥ 32 ký tự | Nên đặt. Để trống thì máy chủ tự sinh khóa và lưu trong CSDL. Đổi giá trị này thì mọi người phải đăng nhập lại |
 | `TZ` | `ICT-7` | Giờ Việt Nam (UTC+7). Máy chủ Render chạy giờ UTC; thiếu dòng này thì mã đơn tạo từ 0h đến 7h sáng mang ngày hôm trước |
 | `DEV_MODE` | `1` khi demo, `0` khi dùng thật | `1` hiện nút "Mô phỏng Máy nhận tiền báo tiền về" ở quầy |
 | `EINVOICE_PROVIDER` | `MOCK` | Viettel/VNPT chưa thử với tài khoản thật |

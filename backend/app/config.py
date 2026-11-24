@@ -25,6 +25,9 @@ def _env(name: str, default: str) -> str:
     return os.environ.get(name, default)
 
 
+PAYOS_KHOA_DEMO = "payos-checksum-key-demo"
+
+
 @dataclass(frozen=True)
 class Settings:
     database_url: str = field(default_factory=lambda: _env(
@@ -35,7 +38,8 @@ class Settings:
         "FRONTEND_DIST", str(ROOT_DIR / "frontend" / "dist"))))
     dev_mode: bool = field(default_factory=lambda: _env("DEV_MODE", "1") == "1")
 
-    jwt_secret: str = field(default_factory=lambda: _env("JWT_SECRET", "khanhvan-dev-secret-doi-khi-trien-khai"))
+    # Để trống thì máy chủ tự sinh khóa ngẫu nhiên một lần và lưu trong CSDL (xem security.khoa_bi_mat).
+    jwt_secret: str = field(default_factory=lambda: _env("JWT_SECRET", "").strip())
     jwt_ttl_minutes: int = field(default_factory=lambda: int(_env("JWT_TTL_MINUTES", "720")))
 
     hold_ttl_minutes: int = field(default_factory=lambda: int(_env("HOLD_TTL_MINUTES", "30")))
@@ -48,7 +52,8 @@ class Settings:
     vietqr_bank_bin: str = field(default_factory=lambda: _env("VIETQR_BANK_BIN", "970436"))
     vietqr_account_no: str = field(default_factory=lambda: _env("VIETQR_ACCOUNT_NO", "0011004455667"))
     vietqr_account_name: str = field(default_factory=lambda: _env("VIETQR_ACCOUNT_NAME", "NGUYEN THI VAN"))
-    payos_checksum_key: str = field(default_factory=lambda: _env("PAYOS_CHECKSUM_KEY", "payos-checksum-key-demo"))
+    # Khóa demo chỉ dùng khi DEV_MODE=1; chạy thật mà chưa đặt khóa thật thì webhook PayOS trả 503.
+    payos_checksum_key: str = field(default_factory=lambda: _env("PAYOS_CHECKSUM_KEY", PAYOS_KHOA_DEMO))
 
     # Hóa đơn điện tử
     einvoice_provider: str = field(default_factory=lambda: _env("EINVOICE_PROVIDER", "MOCK"))

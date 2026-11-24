@@ -22,7 +22,7 @@ services:
     environment: &env
       DATABASE_URL: postgresql://khanhvan:khanhvan@db:5432/khanhvan
       PG_SUPERUSER_URL: postgresql://khanhvan:khanhvan@db:5432/postgres
-      JWT_SECRET: ${JWT_SECRET:-doi-khoa-bi-mat-nay-truoc-khi-trien-khai}
+      JWT_SECRET: ${JWT_SECRET:-}   # trống: tự sinh khóa ngẫu nhiên, lưu trong CSDL
       DEV_MODE: ${DEV_MODE:-1}
       EINVOICE_PROVIDER: ${EINVOICE_PROVIDER:-MOCK}
       PAYOS_CHECKSUM_KEY: ${PAYOS_CHECKSUM_KEY:-payos-checksum-key-demo}

@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 from .. import db
 from ..adapters.payment import GiaoDichVao, xac_thuc_webhook_payos
-from ..config import settings
+from ..config import PAYOS_KHOA_DEMO, settings
 from ..deps import chi_chu, chu_hoac_quan_tri, nhan_vien_ban_hang
 from ..errors import LoiNghiepVu
 from ..security import NguoiDung
@@ -102,6 +102,9 @@ def chot_so(ngay: date | None = None, nguoi: NguoiDung = Depends(chi_chu)):
 # ---------------------------------------------------------------------------
 @router.post("/webhook/payos", tags=["Webhook"])
 async def webhook_payos(request: Request):
+    if not settings.dev_mode and settings.payos_checksum_key == PAYOS_KHOA_DEMO:
+        # Khóa demo nằm trong mã nguồn công khai: ai cũng ký được webhook giả để "báo tiền về".
+        raise LoiNghiepVu("PAYOS_CHUA_CAU_HINH", "Chưa đặt PAYOS_CHECKSUM_KEY thật cho máy chủ", 503)
     try:
         body = await request.json()
         gd = xac_thuc_webhook_payos(body)

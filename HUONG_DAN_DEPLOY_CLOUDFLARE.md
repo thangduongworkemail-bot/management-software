@@ -78,7 +78,7 @@ Chép `backend\.env.example` thành `backend\.env` rồi sửa các dòng sau:
 
 | Dòng | Giá trị | Vì sao |
 |---|---|---|
-| `JWT_SECRET` | chuỗi ngẫu nhiên, tạo bằng `& $py -c "import secrets; print(secrets.token_urlsafe(48))"` | Giá trị mặc định nằm công khai trong mã nguồn. Không đổi thì người ngoài tự tạo được "vé đăng nhập" với quyền Chủ |
+| `JWT_SECRET` | chuỗi ngẫu nhiên, tạo bằng `& $py -c "import secrets; print(secrets.token_urlsafe(48))"` | Không bắt buộc: để trống thì máy chủ tự sinh khóa ngẫu nhiên một lần và lưu trong CSDL. Không dùng các giá trị mẫu từng ghi trong mã nguồn (máy chủ sẽ bỏ qua chúng) |
 | `DEV_MODE` | `1` khi demo, `0` khi dùng thật | `1` hiện nút "Mô phỏng Máy nhận tiền báo tiền về" |
 | `VIETQR_BANK_BIN`, `VIETQR_ACCOUNT_NO`, `VIETQR_ACCOUNT_NAME` | tài khoản nhận tiền thật | Mặc định là tài khoản mẫu |
 | `PAYOS_CHECKSUM_KEY` | khóa thật | Chỉ khi dùng PayOS |

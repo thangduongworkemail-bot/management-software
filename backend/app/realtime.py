@@ -36,24 +36,33 @@ class QuanLyKetNoi:
 
     def bat_dau(self, loop: asyncio.AbstractEventLoop) -> None:
         self.loop = loop
-        self._dung.clear()
-        self._luong = threading.Thread(target=self._lang_nghe, name="pg-listen", daemon=True)
+        # Mỗi luồng một cờ dừng riêng. Dùng chung một cờ rồi clear() khi khởi động lại sẽ "hồi sinh" luồng cũ
+        # chưa kịp thoát, và luồng đó tiếp tục đẩy sự kiện vào vòng lặp đã đóng.
+        self._dung = threading.Event()
+        self._luong = threading.Thread(target=self._lang_nghe, args=(loop, self._dung), name="pg-listen", daemon=True)
         self._luong.start()
 
     def dung(self) -> None:
         self._dung.set()
 
-    def _lang_nghe(self) -> None:
-        while not self._dung.is_set():
+    def _lang_nghe(self, loop: asyncio.AbstractEventLoop, dung: threading.Event) -> None:
+        while not dung.is_set():
             try:
                 with db.connect(autocommit=True) as conn:
                     conn.execute(f"LISTEN {KENH}")
-                    while not self._dung.is_set():
+                    while not dung.is_set():
                         for n in conn.notifies(timeout=1.0):
-                            asyncio.run_coroutine_threadsafe(self.phat(json.loads(n.payload)), self.loop)
+                            if dung.is_set() or loop.is_closed():
+                                return
+                            coro = self.phat(json.loads(n.payload))
+                            try:
+                                asyncio.run_coroutine_threadsafe(coro, loop)
+                            except RuntimeError:  # vòng lặp vừa đóng (máy chủ đang tắt)
+                                coro.close()
+                                return
             except Exception as e:  # mất kết nối CSDL: thử lại sau 3 giây
                 log.warning("LISTEN lỗi, kết nối lại: %s", e)
-                self._dung.wait(3)
+                dung.wait(3)
 
 
 quan_ly = QuanLyKetNoi()

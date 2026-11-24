@@ -3,6 +3,8 @@ frontend/dist/
 .venv/
 __pycache__/
 .pytest_cache/
+.coverage
+htmlcov/
 backend/storage/
 backend/.env
 *.db

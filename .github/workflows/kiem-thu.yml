@@ -1,0 +1,66 @@
+# Kiểm thử tự động mỗi lần push / mở Pull Request (yêu cầu "CI xanh" Tuần 11 của môn học).
+# backend: pytest chạy trên PostgreSQL 17 thật; không chấp nhận test bị bỏ qua (skip = mất kết nối CSDL),
+#          độ phủ toàn bộ app/ không được dưới 70 % (đo ngày 24/11/2026: 80 %).
+# frontend: vitest + build PWA.
+name: Kiểm thử
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Ho_Chi_Minh
+      PG_SUPERUSER_URL: postgresql://postgres:postgres@localhost:5432/postgres
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Cài thư viện
+        run: pip install -r requirements.txt pytest-cov
+      - name: pytest + độ phủ
+        run: |
+          python -m pytest -q -rs --cov=app --cov-report=term --cov-fail-under=70 | tee ket-qua-pytest.txt
+          if grep -qi "skipped" ket-qua-pytest.txt; then
+            echo "::error::Có test bị bỏ qua (thường do không kết nối được PostgreSQL)"
+            exit 1
+          fi
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Cài thư viện
+        run: npm ci --no-audit --no-fund
+      - name: vitest
+        run: npx vitest run
+      - name: Build PWA
+        run: npm run build

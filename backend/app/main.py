@@ -74,7 +74,8 @@ for r in (auth.router, catalog.router, inventory.router, sales.router, payments.
 def suc_khoe():
     with db.transaction() as conn:
         conn.execute("SELECT 1")
-    return {"ok": True}
+    # che_do_demo: trang đăng nhập chỉ hiện nút chọn nhanh tài khoản demo khi DEV_MODE=1
+    return {"ok": True, "che_do_demo": settings.dev_mode}
 
 
 settings.local_storage_dir.mkdir(parents=True, exist_ok=True)

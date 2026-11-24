@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends
+import threading
+import time
+
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 
 from .. import db
@@ -8,6 +11,32 @@ from ..security import NguoiDung, hash_mat_khau, kiem_tra_mat_khau, tao_token
 from ..services import audit
 
 router = APIRouter(prefix="/api", tags=["Tài khoản"])
+
+# Chống dò mật khẩu: sai SAI_TOI_DA lần trong CUA_SO_GIAY với cùng (tài khoản, địa chỉ IP) thì tạm khóa đăng nhập
+# cho cặp đó tới khi lần sai cũ nhất ra khỏi cửa sổ. Khóa theo cặp nên kẻ dò từ một máy không khóa được Chủ ở máy khác.
+# Lưu trong bộ nhớ: đủ cho một tiến trình API như cách triển khai hiện tại.
+SAI_TOI_DA = 5
+CUA_SO_GIAY = 15 * 60
+_lan_sai: dict[tuple[str, str], list[float]] = {}
+_lan_sai_lock = threading.Lock()
+
+
+def _giay_con_khoa(khoa: tuple[str, str]) -> int:
+    bay_gio = time.monotonic()
+    with _lan_sai_lock:
+        ds = [t for t in _lan_sai.get(khoa, []) if bay_gio - t < CUA_SO_GIAY]
+        if ds:
+            _lan_sai[khoa] = ds
+        else:
+            _lan_sai.pop(khoa, None)
+        return int(CUA_SO_GIAY - (bay_gio - ds[0])) + 1 if len(ds) >= SAI_TOI_DA else 0
+
+
+def _ghi_lan_sai(khoa: tuple[str, str]) -> int:
+    with _lan_sai_lock:
+        ds = _lan_sai.setdefault(khoa, [])
+        ds.append(time.monotonic())
+        return len(ds)
 
 
 class DangNhap(BaseModel):
@@ -32,14 +61,25 @@ class DatLaiMatKhau(BaseModel):
 
 
 @router.post("/auth/dang-nhap")
-def dang_nhap(body: DangNhap):
+def dang_nhap(body: DangNhap, request: Request):
+    ten = body.ten_dang_nhap.strip().lower()
+    khoa = (ten, request.client.host if request.client else "?")
+    con = _giay_con_khoa(khoa)
+    if con:
+        raise LoiNghiepVu("THU_SAI_QUA_NHIEU", f"Sai mật khẩu {SAI_TOI_DA} lần liên tiếp. Thử lại sau "
+                                               f"{(con + 59) // 60} phút.", 429)
     with db.transaction() as conn:
-        tk = conn.execute("SELECT * FROM tai_khoan WHERE ten_dang_nhap = %s", (body.ten_dang_nhap.strip().lower(),)
-                          ).fetchone()
-        if not tk or not tk["kich_hoat"] or not kiem_tra_mat_khau(tk["mat_khau_hash"], body.mat_khau):
-            raise LoiNghiepVu("SAI_DANG_NHAP", "Sai tài khoản hoặc mật khẩu", 401)
-        nguoi = NguoiDung(id=tk["id"], vai_tro=tk["vai_tro"], ho_ten=tk["ho_ten"])
-        audit.ghi(conn, nguoi, "DANG_NHAP", "TAI_KHOAN", tk["id"])
+        tk = conn.execute("SELECT * FROM tai_khoan WHERE ten_dang_nhap = %s", (ten,)).fetchone()
+        dung = bool(tk and tk["kich_hoat"] and kiem_tra_mat_khau(tk["mat_khau_hash"], body.mat_khau))
+        if dung:
+            nguoi = NguoiDung(id=tk["id"], vai_tro=tk["vai_tro"], ho_ten=tk["ho_ten"])
+            audit.ghi(conn, nguoi, "DANG_NHAP", "TAI_KHOAN", tk["id"])
+        elif _ghi_lan_sai(khoa) == SAI_TOI_DA:
+            audit.ghi(conn, None, "TAM_KHOA_DANG_NHAP", "TAI_KHOAN", ten, sau={"ip": khoa[1], "so_lan_sai": SAI_TOI_DA})
+    if not dung:
+        raise LoiNghiepVu("SAI_DANG_NHAP", "Sai tài khoản hoặc mật khẩu", 401)
+    with _lan_sai_lock:
+        _lan_sai.pop(khoa, None)
     return {"token": tao_token(nguoi), "nguoi_dung": nguoi.__dict__}
 
 

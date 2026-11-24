@@ -37,7 +37,8 @@ class LocalStorage:
         self.thu_muc = thu_muc or settings.local_storage_dir
 
     def _ky(self, khoa: str, het_han: int) -> str:
-        return hmac.new(settings.jwt_secret.encode(), f"{khoa}|{het_han}".encode(), hashlib.sha256).hexdigest()
+        from ..security import khoa_bi_mat
+        return hmac.new(khoa_bi_mat().encode(), f"{khoa}|{het_han}".encode(), hashlib.sha256).hexdigest()
 
     def tao_url_tai_len(self, khoa: str, het_han_giay: int = 900) -> UrlTaiLen:
         het_han = int(time.time()) + het_han_giay

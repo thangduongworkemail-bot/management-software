@@ -16,7 +16,7 @@ There are two generations side by side:
 Run every Python command for this project with `C:\ProgramData\miniconda3\envs\ai_signal\python.exe` (Python 3.11), never `backend\.venv` or a bare `python`. `conda` is not on PATH, so call the interpreter by full path (Bash: `/c/ProgramData/miniconda3/envs/ai_signal/python.exe`).
 
 - `start.ps1`, `test.ps1` and `demo-public.ps1` use `$env:KHANHVAN_PYTHON` when it is set, otherwise `backend\.venv`. Set it to the `ai_signal` interpreter before running them. `setup.ps1` still creates and uses `.venv`, so don't run it here.
-- `ai_signal` is a shared env whose package versions differ from the pins in `backend/requirements.txt` (FastAPI 0.141 vs 0.115.12, pytest 9 vs 8.3.5); the whole suite passes on it. The other backend deps were installed into it at their pinned versions. Ask the user before installing anything else, and don't `pip install -r requirements.txt` into it, since that would downgrade packages. It is Python 3.11, so avoid 3.12-only features (e.g. `f"{Fraction(...):.3f}"`).
+- `ai_signal` is a shared env whose package versions differ from the pins in `backend/requirements.txt` (FastAPI 0.141 vs 0.165.0 since the Week 13 security upgrade); the suite passed on it before that upgrade. The other backend deps were installed into it at their pinned versions. Ask the user before installing anything else, and don't `pip install -r requirements.txt` into it, since that would downgrade packages. It is Python 3.11, so avoid 3.12-only features (e.g. `f"{Fraction(...):.3f}"`).
 - PostgreSQL 17 is installed as the Windows service `postgresql-x64-17` (`C:\Program Files\PostgreSQL\17\bin`).
 
 ## Commands
