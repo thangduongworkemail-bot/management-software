@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { get } from '../api'
 import { ngay, tien } from '../lib/format'
+import { chiaSe as moChiaSe } from '../nen-tang'
 
 const route = useRoute()
 const bg = ref(null)
@@ -15,8 +16,7 @@ onMounted(async () => {
 const inTrang = () => window.print()
 
 async function chiaSe() {
-  if (navigator.share) await navigator.share({ title: `Báo giá ${bg.value.ma}`, url: location.href }).catch(() => {})
-  else await navigator.clipboard?.writeText(location.href)
+  await moChiaSe({ tieuDe: `Báo giá ${bg.value.ma}`, url: location.href }).catch(() => {})
 }
 </script>
 

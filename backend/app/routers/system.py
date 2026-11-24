@@ -8,7 +8,7 @@ from ..adapters.storage import LocalStorage, lay_storage, tao_khoa_file
 from ..deps import chi_chu, chu_hoac_quan_tri, nguoi_dung, nhan_vien_ban_hang
 from ..errors import LoiNghiepVu
 from ..security import NguoiDung
-from ..services import audit, devices, reports, sync
+from ..services import audit, day, devices, reports, sync
 
 router = APIRouter(prefix="/api", tags=["Hệ thống"])
 
@@ -146,3 +146,52 @@ async def tai_len_cuc_bo(khoa: str, het_han: int, chu_ky: str, request: Request)
     if len(noi_dung) > 10 * 1024 * 1024:
         raise LoiNghiepVu("FILE_QUA_LON", "File tối đa 10MB", 413)
     return {"file_url": storage.luu(khoa, noi_dung)}
+
+
+# --- Thông báo đẩy tới app trên điện thoại (Web Push) ---------------------------
+class KhoaMay(BaseModel):
+    p256dh: str = Field(min_length=20, max_length=200)
+    auth: str = Field(min_length=8, max_length=100)
+
+
+class DangKyDay(BaseModel):
+    endpoint: str = Field(min_length=20, max_length=1000)
+    keys: KhoaMay
+
+
+class HuyDay(BaseModel):
+    endpoint: str = Field(min_length=20, max_length=1000)
+
+
+@router.get("/day/khoa")
+def khoa_day(_: NguoiDung = Depends(nguoi_dung)):
+    """Khóa công khai VAPID (applicationServerKey) trình duyệt cần khi bật thông báo."""
+    with db.transaction() as conn:
+        return {"khoa_cong_khai": day.khoa_cong_khai(conn)}
+
+
+@router.post("/day/dang-ky")
+def dang_ky_day(body: DangKyDay, request: Request, nguoi: NguoiDung = Depends(nguoi_dung)):
+    with db.transaction() as conn:
+        kq = day.dang_ky(conn, nguoi, body.endpoint, body.keys.p256dh, body.keys.auth,
+                         request.headers.get("user-agent"))
+        audit.ghi(conn, nguoi, "BAT_THONG_BAO_DAY", "DANG_KY_DAY", kq["id"], sau={"thiet_bi": kq["thiet_bi"]})
+        return kq
+
+
+@router.post("/day/huy")
+def huy_day(body: HuyDay, nguoi: NguoiDung = Depends(nguoi_dung)):
+    with db.transaction() as conn:
+        return {"da_huy": day.huy(conn, nguoi, body.endpoint)}
+
+
+@router.get("/day/may")
+def may_nhan_day(nguoi: NguoiDung = Depends(nguoi_dung)):
+    with db.transaction() as conn:
+        return day.ds_may_cua(conn, nguoi)
+
+
+@router.post("/day/thu")
+def thu_day(nguoi: NguoiDung = Depends(nguoi_dung)):
+    with db.transaction() as conn:
+        return day.gui_thu(conn, nguoi)

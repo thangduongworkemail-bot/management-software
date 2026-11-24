@@ -5,6 +5,7 @@ import { kichThuoc, ngayGio, thongSo, tien } from '../lib/format'
 import { bao, laChu, xemGiaVon } from '../store'
 import AnhHangHoa from '../components/AnhHangHoa.vue'
 import HopThoai from '../components/HopThoai.vue'
+import SuaCongThuc from '../components/SuaCongThuc.vue'
 import SuaHangHoa from '../components/SuaHangHoa.vue'
 
 const hang = ref([])
@@ -56,6 +57,14 @@ function capNhatAnh(h, anhUrl) {
 }
 
 const sua = ref({ mo: false, hang: null })
+const suaCongThuc = ref(false)
+async function daLuuCongThuc() {
+  const t = chiTiet.value?.thu
+  await mo(chiTiet.value)
+  // Đang thử một kích thước thì tính lại ngay theo công thức mới
+  if (t?.kich_thuoc) { chiTiet.value.thu.kich_thuoc = t.kich_thuoc; await thuTinh() }
+  tai()
+}
 async function daLuu(kq) {
   await tai()
   if (chiTiet.value && kq.id === chiTiet.value.id) await mo(kq)
@@ -131,7 +140,10 @@ const TEN_GIA = { GIA_VON: 'Giá vốn', GIA_SAN: 'Giá sàn', GIA_NIEM_YET: 'Gi
           <div v-for="x in chiTiet.xuong" :key="x.ten">{{ x.ten }} • mã xưởng {{ x.ma_hang_xuong }} • giao {{ x.so_ngay_giao }} ngày<template v-if="x.gia_nhap"> • nhập {{ tien(x.gia_nhap) }}</template></div>
         </div>
         <div v-if="chiTiet.dat_theo_kich_thuoc" class="space-y-2">
-          <div class="font-bold">Thử tính giá đặt riêng</div>
+          <div class="flex items-center justify-between gap-2">
+            <span class="font-bold">Thử tính giá đặt riêng</span>
+            <button v-if="laChu()" type="button" class="nut-vien nut-nho" @click="suaCongThuc = true">Sửa công thức giá</button>
+          </div>
           <form class="flex gap-2" @submit.prevent="thuTinh">
             <input v-model="chiTiet.thu.kich_thuoc" class="o-nhap" placeholder='"2m4", "1m8 x 80cm"…' aria-label="Kích thước" required />
             <button class="nut-vien">Tính</button>
@@ -160,5 +172,6 @@ const TEN_GIA = { GIA_VON: 'Giá vốn', GIA_SAN: 'Giá sàn', GIA_NIEM_YET: 'Gi
       </template>
     </HopThoai>
     <SuaHangHoa :mo="sua.mo" :hang="sua.hang" @dong="sua.mo = false" @da-luu="daLuu" />
+    <SuaCongThuc :mo="suaCongThuc" :hang="chiTiet" @dong="suaCongThuc = false" @da-luu="daLuuCongThuc" />
   </div>
 </template>

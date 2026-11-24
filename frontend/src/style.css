@@ -3,8 +3,16 @@
 @tailwind utilities;
 
 /* Chữ to, chạm dễ: thiết kế cho người lớn tuổi ít dùng máy tính */
-html { font-size: 17px; }
-body { @apply bg-than-nhat text-than antialiased; }
+html { font-size: 17px; -webkit-text-size-adjust: 100%; }
+body { @apply bg-than-nhat text-than antialiased; -webkit-tap-highlight-color: transparent; }
+
+/* Vùng an toàn trên điện thoại (tai thỏ, thanh home của iPhone, thanh hệ thống Android khi app tràn viền).
+   Capacitor có thể cấp sẵn biến --safe-area-inset-*; không có thì dùng env() của trình duyệt. */
+:root {
+  --vung-tren: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --vung-duoi: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  --cao-thanh-duoi: 64px;
+}
 
 @layer components {
   .the { @apply bg-white border border-slate-300 rounded-xl p-4; }
@@ -27,6 +35,24 @@ body { @apply bg-than-nhat text-than antialiased; }
   .bang td { @apply p-3 border-b border-slate-200 align-top; }
   .bang td.text-right { @apply whitespace-nowrap; }
 }
+
+@layer utilities {
+  .dem-tren-an-toan { padding-top: var(--vung-tren); }
+  .dem-duoi-an-toan { padding-bottom: var(--vung-duoi); }
+}
+
+@layer components {
+  /* Thanh điều hướng dưới cùng trên điện thoại */
+  .o-thanh-duoi { @apply relative flex flex-col items-center justify-center gap-0.5 text-[11px] leading-tight font-bold text-slate-600
+                  focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-do;
+                  min-height: var(--cao-thanh-duoi); }
+  .o-thanh-duoi-chon { @apply text-do; }
+  .o-thanh-duoi-chon::before { content: ''; @apply absolute top-0 inset-x-4 h-[3px] rounded-b bg-do; }
+}
+
+/* Chừa chỗ cho thanh dưới để nút cuối trang không bị che */
+.chua-cho-thanh-duoi { padding-bottom: calc(var(--cao-thanh-duoi) + var(--vung-duoi) + 1rem); }
+@media (min-width: 768px) { .chua-cho-thanh-duoi { padding-bottom: 1rem; } }
 
 @media print {
   .khong-in { display: none !important; }

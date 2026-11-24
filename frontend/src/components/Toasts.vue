@@ -10,10 +10,16 @@ const MAU = {
 </script>
 
 <template>
-  <div class="khong-in fixed bottom-4 right-4 z-50 flex flex-col gap-2 w-[min(420px,calc(100vw-2rem))]" aria-live="polite">
+  <div class="khong-in fixed right-4 z-50 pointer-events-none flex flex-col gap-2 w-[min(420px,calc(100vw-2rem))] vi-tri-thong-bao" aria-live="polite">
     <div v-for="t in trangThai.thongBao" :key="t.id" :class="MAU[t.loai]"
       class="rounded-xl px-4 py-3 font-bold shadow-lg">
       {{ t.noiDung }}
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Trên điện thoại nằm ngay trên thanh điều hướng dưới cùng */
+.vi-tri-thong-bao { bottom: calc(var(--cao-thanh-duoi) + var(--vung-duoi) + 0.75rem); }
+@media (min-width: 768px) { .vi-tri-thong-bao { bottom: 1rem; } }
+</style>

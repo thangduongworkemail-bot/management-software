@@ -8,7 +8,8 @@ offline-first. Bản prototype cũ (`server.py`, `index.html`, SQLite) vẫn đ�
 ```text
 database/migrations/   DDL PostgreSQL: 001 bảng & ràng buộc, 002 trigger, 003 chỉ mục tìm kiếm & view,
                        004 thông số hàng hóa chi tiết + thông tin xưởng, 005 ảnh minh họa bộ sản phẩm,
-                       006 từ đồng nghĩa áp dụng cả phía mặt hàng khi tìm kiếm
+                       006 từ đồng nghĩa áp dụng cả phía mặt hàng khi tìm kiếm,
+                       007 thông báo đẩy (đăng ký theo máy, khóa VAPID) và dấu cảnh báo tồn dưới ngưỡng
 backend/app/
   domain/              Logic thuần, không phụ thuộc CSDL: đọc kích thước, 3 công thức giá, VietQR
   adapters/            Kết nối ngoài: HĐĐT (Mock/VNPT/Viettel), PayOS, lưu file (Local/S3), thông báo
@@ -79,7 +80,12 @@ docker compose up -d --build     # http://localhost:8000
 | Tìm kiếm tiếng Việt < 1 giây | `f_unaccent` IMMUTABLE + cột `tim_kiem` do trigger điền (kèm token "1800 1m8") + GIN `gin_trgm_ops`; từ đồng nghĩa thay trong câu tìm và bổ sung tên chuẩn vào `tim_kiem` của hàng đặt tên theo cách gọi thường (006); không khớp đủ từ thì tìm gần đúng bằng `word_similarity` |
 | Thông số hàng hóa | Cột chung (hoàn thiện, kiểu dáng, vật liệu phụ, xuất xứ, khối lượng, bảo hành, đơn vị, mô tả) + `thuoc_tinh` JSONB theo mẫu của nhóm hàng (`loai_hang.thuoc_tinh_mau`, khóa là nhãn tiếng Việt); tìm kiếm phủ cả các thông số này |
 | Kiểm kê, sửa, thêm, xóa hàng | Tab *Kho → Kiểm kê & hàng hóa* (Chủ): nhập số thực đếm, chênh lệch tính dưới khóa rồi ghi `DIEU_CHINH`; sửa mọi thuộc tính (đổi giá vẫn qua lịch sử giá); thêm hàng kèm tồn ban đầu; *xóa* = ngừng bán, tồn còn lại ghi điều chỉnh về 0, có thể khôi phục (không xóa cứng vì sổ cái/đơn cũ tham chiếu) |
+| App Android/iOS | PWA cài từ trình duyệt (manifest, biểu tượng PNG, thẻ meta iOS, vùng an toàn) và vỏ Capacitor `frontend/android`, `frontend/ios`; app gốc chọn địa chỉ máy chủ, mọi URL tới máy chủ đi qua `nen-tang.urlMayChu()`, máy chủ bật CORS cho `capacitor://localhost`, `https://localhost`. Chi tiết: `HUONG_DAN_APP_DI_DONG.md` |
+| Thông báo đẩy | `events.phat()` của các sự kiện cần xử lý (duyệt giá, tiền lệch, HĐĐT lỗi, xung đột tồn, máy nhận tiền, tồn dưới ngưỡng) xếp một dòng `thong_bao` kênh PUSH cho mỗi máy đã đăng ký của người nhận, cùng giao dịch; Worker mã hóa aes128gcm (RFC 8291), ký VAPID ES256 (RFC 8292), thử lại khi lỗi tạm thời, xóa đăng ký khi dịch vụ đẩy trả 404/410 |
+| Cảnh báo tồn dưới ngưỡng | Worker mỗi phút so `ton_kha_dung` với `ton_toi_thieu`; bảng `canh_bao_ton` chống nhắc lặp trong 24 giờ, xóa dấu khi nhập đủ lại |
+| Cấu hình công thức giá | `PUT /api/hang-hoa/bien-the/{id}/cong-thuc` (Chủ): `pricing.kiem_tra_cong_thuc` chặn công thức sai (bậc trùng/giảm giá, sàn < vốn…), ghi nhật ký trước/sau; mặt hàng thường chỉ chuyển sang đặt riêng khi hết tồn; `PUT /he-so-go` thêm/đổi hệ số gỗ |
 | Nhập danh mục từ KiotViet | `python -m app.nhap_kiotviet <file.csv>`: gom biến thể theo *Mã HH Liên quan*, đoán nhóm hàng theo tên, đọc kích thước từ thuộc tính; giá vào lịch sử giá, tồn kho ghi `DIEU_CHINH` tồn đầu kỳ; một giao dịch, chạy lại không nhập trùng; từ chối file đã mất dấu tiếng Việt |
+| Hàng mẫu bổ sung | `python -m app.hang_mau_bo_sung`: 30 mặt hàng gỗ, giá tham khảo bán lẻ 11/2026; đi qua `catalog.tao_bien_the`, `inventory.tao_phieu_nhap`, `catalog.luu_cong_thuc` như hàng thật; bỏ qua mọi thứ đã có nên chạy lại an toàn; `bootstrap` nạp kèm khi dựng CSDL mới (test thì không, để giữ đúng dữ liệu mẫu theo báo cáo) |
 | Thêm xưởng khi nhập kho | Nút *+ Xưởng mới* trong phiếu nhập (Chủ và Thợ), mã xưởng tự sinh, chặn trùng tên không dấu |
 | Tiền & kích thước | BIGINT VNĐ, INTEGER mm, hệ số gỗ INTEGER phần nghìn; công thức tính bằng phân số, làm tròn nghìn đồng nửa lên |
 
@@ -95,7 +101,10 @@ docker compose up -d --build     # http://localhost:8000
 | `backend/tests/test_api.py` | Đăng nhập, RBAC, idempotency qua header, webhook có chữ ký, ghép nối & ký HMAC thiết bị, báo giá công khai, đồng bộ offline | đạt |
 | `frontend/src/lib/lib.test.js` | Bản JS của bộ đọc kích thước & công thức giá cho kết quả giống backend | đạt |
 
-Tổng: 141 test pytest + 15 test vitest. Ngoài ra `backend/scripts/smoke.py` chạy kịch bản đầu-cuối trên hệ thống đang chạy
+Thêm `test_thong_bao_day.py` (Web Push, bộ mẫu RFC 8291, CORS) và `test_cong_thuc_gia.py` (cấu hình công thức giá),
+`frontend/src/lib/may-chu.test.js` (địa chỉ máy chủ của app).
+
+Tổng (21/11/2026): 223 test pytest + 31 test vitest. Ngoài ra `backend/scripts/smoke.py` chạy kịch bản đầu-cuối trên hệ thống đang chạy
 (tìm kiếm → lập đơn → tiền về → chốt đơn → Worker xuất HĐĐT → duyệt giá sàn → kiểm tra chuỗi băm).
 
 ## 8. Tích hợp bên ngoài — trạng thái thật

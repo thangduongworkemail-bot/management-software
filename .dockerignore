@@ -8,3 +8,7 @@ backend/storage
 .agents
 .review
 *.db
+
+# Dự án gốc Android/iOS (Capacitor): không cần để build ảnh Docker
+frontend/android
+frontend/ios

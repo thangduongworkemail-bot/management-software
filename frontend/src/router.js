@@ -1,19 +1,31 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { canChonMayChu } from './nen-tang'
 import { trangThai } from './store'
 
 const TAT_CA = ['CHU', 'THO', 'QUAN_TRI']
 
+// tenNgan, bieuTuong: thanh điều hướng dưới cùng trên điện thoại
 export const MENU = [
-  { path: '/', ten: 'Tổng quan', vaiTro: TAT_CA },
-  { path: '/ban-hang', ten: 'Bán hàng', vaiTro: ['CHU', 'THO'] },
-  { path: '/don-hang', ten: 'Đơn hàng', vaiTro: TAT_CA },
-  { path: '/kho', ten: 'Kho & Xưởng', vaiTro: TAT_CA },
-  { path: '/hang-hoa', ten: 'Hàng hóa & Giá', vaiTro: TAT_CA },
-  { path: '/doi-soat', ten: 'Đối soát & Chốt ngày', vaiTro: ['CHU'] },
-  { path: '/hoa-don', ten: 'HĐĐT & Công nợ', vaiTro: ['CHU', 'THO'] },
-  { path: '/he-thong', ten: 'Nhân viên & Nhật ký', vaiTro: ['CHU', 'QUAN_TRI'] },
-  { path: '/su-co', ten: 'Trung tâm sự cố', vaiTro: TAT_CA },
+  { path: '/', ten: 'Tổng quan', tenNgan: 'Tổng quan', bieuTuong: 'tong-quan', vaiTro: TAT_CA },
+  { path: '/ban-hang', ten: 'Bán hàng', tenNgan: 'Bán hàng', bieuTuong: 'ban-hang', vaiTro: ['CHU', 'THO'] },
+  { path: '/don-hang', ten: 'Đơn hàng', tenNgan: 'Đơn hàng', bieuTuong: 'don-hang', vaiTro: TAT_CA },
+  { path: '/kho', ten: 'Kho & Xưởng', tenNgan: 'Kho', bieuTuong: 'kho', vaiTro: TAT_CA },
+  { path: '/hang-hoa', ten: 'Hàng hóa & Giá', tenNgan: 'Hàng hóa', bieuTuong: 'hang-hoa', vaiTro: TAT_CA },
+  { path: '/doi-soat', ten: 'Đối soát & Chốt ngày', tenNgan: 'Đối soát', bieuTuong: 'doi-soat', vaiTro: ['CHU'] },
+  { path: '/hoa-don', ten: 'HĐĐT & Công nợ', tenNgan: 'HĐĐT', bieuTuong: 'hoa-don', vaiTro: ['CHU', 'THO'] },
+  { path: '/he-thong', ten: 'Nhân viên & Nhật ký', tenNgan: 'Hệ thống', bieuTuong: 'he-thong', vaiTro: ['CHU', 'QUAN_TRI'] },
+  { path: '/su-co', ten: 'Trung tâm sự cố', tenNgan: 'Sự cố', bieuTuong: 'su-co', vaiTro: TAT_CA },
 ]
+
+/** 4 mục hay dùng nhất của từng vai trò hiện ở thanh dưới; các mục còn lại nằm trong nút "Thêm". */
+const UU_TIEN_DUOI = ['/ban-hang', '/', '/don-hang', '/kho', '/hang-hoa', '/he-thong', '/su-co']
+export function chiaMenuDienThoai(menu) {
+  const chinh = UU_TIEN_DUOI.filter(p => menu.some(m => m.path === p)).slice(0, 4)
+  return {
+    chinh: menu.filter(m => chinh.includes(m.path)),
+    phu: menu.filter(m => !chinh.includes(m.path)),
+  }
+}
 
 const view = {
   '/': () => import('./views/TongQuan.vue'),
@@ -40,6 +52,8 @@ export const router = createRouter({
 
 router.beforeEach((to) => {
   if (to.meta.congKhai) return true
+  // App Android/iOS mở lần đầu: phải chọn máy chủ cửa hàng trước (màn đăng nhập có ô nhập)
+  if (canChonMayChu()) return { path: '/dang-nhap', query: { tiep: to.fullPath } }
   if (!trangThai.token) return { path: '/dang-nhap', query: { tiep: to.fullPath } }
   if (to.meta.vaiTro && !to.meta.vaiTro.includes(trangThai.nguoi?.vai_tro)) return '/'
   return true

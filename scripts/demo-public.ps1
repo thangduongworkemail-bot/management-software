@@ -25,6 +25,9 @@ $cf = @("$goc\.tools\cloudflared.exe", (Get-Command cloudflared -ErrorAction Sil
         "${env:ProgramFiles(x86)}\cloudflared\cloudflared.exe") | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
 if (-not $cf) { Write-Host 'Chưa có cloudflared. Cài: winget install --id Cloudflare.cloudflared' -ForegroundColor Red; exit 1 }
 $env:PYTHONIOENCODING = 'utf-8'
+# Áp dụng migration mới (nếu có) trước khi chạy
+Push-Location "$goc\backend"; & $py -m app.migrate; $maThoat = $LASTEXITCODE; Pop-Location
+if ($maThoat -ne 0) { Write-Host 'Không áp dụng được migration. Kiểm tra PostgreSQL đang chạy.' -ForegroundColor Red; exit 1 }
 Start-Process -FilePath $py -ArgumentList '-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', '8000', '--proxy-headers' `
   -WorkingDirectory "$goc\backend" -WindowStyle Hidden -RedirectStandardOutput "$log\api.log" -RedirectStandardError "$log\api.err.log"
 Start-Process -FilePath $py -ArgumentList '-m', 'app.worker' -WorkingDirectory "$goc\backend" -WindowStyle Hidden `

@@ -1,3 +1,4 @@
+import { urlRealtime } from './nen-tang'
 import { bao, trangThai } from './store'
 
 const THONG_DIEP = {
@@ -9,6 +10,7 @@ const THONG_DIEP = {
   HDDT_LOI: d => [`Hóa đơn điện tử lỗi: ${d.ly_do}`, 'loi'],
   XUNG_DOT_TON: d => [`Đơn #${d.ma} vượt tồn khả dụng — cần xử lý`, 'canh-bao'],
   MAY_NHAN_TIEN_MAT_KET_NOI: d => [`Máy nhận tiền "${d.ten}" mất kết nối`, 'canh-bao'],
+  TON_DUOI_NGUONG: d => [`${d.danh_sach.length} mặt hàng sắp hết: ${d.danh_sach.slice(0, 3).map(h => h.ten).join(', ')}`, 'canh-bao'],
 }
 
 let ws = null
@@ -16,8 +18,7 @@ let hen = null
 
 export function ketNoiRealtime() {
   if (!trangThai.token || (ws && ws.readyState <= 1)) return
-  const giaoThuc = location.protocol === 'https:' ? 'wss' : 'ws'
-  ws = new WebSocket(`${giaoThuc}://${location.host}/ws?token=${encodeURIComponent(trangThai.token)}`)
+  ws = new WebSocket(urlRealtime(trangThai.token))
   const ping = setInterval(() => ws?.readyState === 1 && ws.send('ping'), 25_000)
   ws.onmessage = (e) => {
     const sk = JSON.parse(e.data)

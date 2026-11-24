@@ -30,6 +30,28 @@ class DocKichThuoc(BaseModel):
     max_mm: int = 3000
 
 
+class BacGia(BaseModel):
+    toi_da_mm: int = Field(gt=0, le=20000)
+    gia: int = Field(ge=0)
+
+
+class CongThuc(BaseModel):
+    """Công thức giá hàng đặt kích thước riêng. Tỷ lệ tính theo phần nghìn của giá bán (650 = 65%)."""
+    kieu: str = Field(pattern=r"^(THEO_CHIEU_DAI|THEO_DIEN_TICH|THEO_BAC)$")
+    don_gia: int | None = Field(default=None, ge=0)
+    phu_phi: int = Field(default=0, ge=0)
+    bac_gia: list[BacGia] = Field(default_factory=list, max_length=50)
+    kich_thuoc_min_mm: int = Field(default=400, ge=0, le=20000)
+    kich_thuoc_max_mm: int = Field(default=3000, ge=0, le=20000)
+    ty_le_gia_von_phan_nghin: int = Field(default=650, ge=0, le=1000)
+    ty_le_gia_san_phan_nghin: int = Field(default=800, ge=0, le=1000)
+
+
+class HeSoGo(BaseModel):
+    loai_go: str = Field(min_length=1, max_length=40)
+    he_so_phan_nghin: int = Field(gt=0, le=10000)
+
+
 class DongNghia(BaseModel):
     tu_khoa: str = Field(min_length=1)
     tu_chuan: str = Field(min_length=1)
@@ -197,6 +219,25 @@ def dat_gia(bien_the_id: int, body: DatGia, nguoi: NguoiDung = Depends(chi_chu))
 def lich_su_gia(bien_the_id: int, _: NguoiDung = Depends(chi_chu)):
     with db.transaction() as conn:
         return catalog.lich_su_gia(conn, bien_the_id)
+
+
+@router.get("/bien-the/{bien_the_id}/cong-thuc")
+def doc_cong_thuc(bien_the_id: int, _: NguoiDung = Depends(chi_chu)):
+    with db.transaction() as conn:
+        return catalog.doc_cong_thuc(conn, bien_the_id)
+
+
+@router.put("/bien-the/{bien_the_id}/cong-thuc")
+def luu_cong_thuc(bien_the_id: int, body: CongThuc, nguoi: NguoiDung = Depends(chi_chu)):
+    """Chủ tạo/sửa công thức giá đặt riêng; mặt hàng thường (hết tồn) được chuyển sang đặt theo kích thước."""
+    with db.transaction() as conn:
+        return catalog.luu_cong_thuc(conn, nguoi, bien_the_id, body.model_dump())
+
+
+@router.put("/he-so-go")
+def dat_he_so_go(body: HeSoGo, nguoi: NguoiDung = Depends(chi_chu)):
+    with db.transaction() as conn:
+        return catalog.dat_he_so_go(conn, nguoi, body.loai_go, body.he_so_phan_nghin)
 
 
 @router.post("/bien-the/{bien_the_id}/tinh-gia")

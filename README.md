@@ -15,6 +15,7 @@ Kho mã gồm hai thế hệ:
 | Bản 1 (prototype) | `server.py`, `index.html`, `sw.js`, `tests/` ở thư mục gốc | Python stdlib + SQLite | Giữ lại để đối chiếu, xem [README_PROTOTYPE_V1.md](README_PROTOTYPE_V1.md) |
 
 Tài liệu bàn giao chi tiết của bản 2: [HUONG_DAN_V2.md](HUONG_DAN_V2.md).
+App trên điện thoại Android và iOS (PWA, APK, Xcode): [HUONG_DAN_APP_DI_DONG.md](HUONG_DAN_APP_DI_DONG.md).
 
 ---
 
@@ -40,7 +41,7 @@ Tài liệu bàn giao chi tiết của bản 2: [HUONG_DAN_V2.md](HUONG_DAN_V2.m
 
 **Bán hàng tại quầy**
 - Tra giá tiếng Việt có dấu hoặc không dấu, hiểu từ đồng nghĩa ("tủ áo" = "tủ quần áo") và kích thước viết tắt ("giường 1m8 sồi"), dưới 1 giây trên 20.000 mặt hàng.
-- Hàng đặt theo kích thước riêng tính giá theo 3 công thức: **mét dài** (tủ thờ, án gian), **m²** (mặt bàn) và **bậc kích thước** (giường), có nhân hệ số loại gỗ.
+- Hàng đặt theo kích thước riêng tính giá theo 3 công thức: **mét dài** (tủ thờ, án gian), **m²** (mặt bàn) và **bậc kích thước** (giường), có nhân hệ số loại gỗ. Chủ tự cấu hình công thức, bảng bậc và hệ số gỗ ngay trên giao diện, có xem trước giá khi gõ; đơn cũ giữ nguyên bản chụp giá.
 - Giá 3 tầng: giá vốn → giá sàn → giá niêm yết. Thợ bán dưới giá sàn thì đơn chờ Chủ duyệt (đẩy thông báo tức thời), hàng vẫn được giữ.
 - Sinh mã **VietQR** (Napas 247) tại quầy. Tiền về qua webhook PayOS hoặc "Máy nhận tiền" (điện thoại đọc thông báo ngân hàng, ký HMAC) thì đơn tự xác nhận. Có xác nhận tay và xử lý lệch tiền.
 - Đặt cọc, bán chịu, trả hàng, báo giá có link chia sẻ công khai, in phiếu giao hàng.
@@ -56,6 +57,12 @@ Tài liệu bàn giao chi tiết của bản 2: [HUONG_DAN_V2.md](HUONG_DAN_V2.m
 **Tài chính và hóa đơn**
 - Hóa đơn điện tử tách khỏi việc bán: đơn thu đủ thì xếp hàng đợi, Worker gửi lên nhà cung cấp và tự thử lại khi lỗi (1, 2, 4… phút, tối đa 60 phút, 10 lần).
 - Đối soát giao dịch ngân hàng, chốt sổ cuối ngày, công nợ khách hàng và công nợ xưởng.
+
+**App trên điện thoại (Android và iOS)**
+- Một mã nguồn: cài PWA từ Chrome/Safari ra màn hình chính, hoặc đóng gói thành app gốc bằng Capacitor (`frontend/android`, `frontend/ios`).
+- Giao diện điện thoại có thanh điều hướng dưới cùng, chừa vùng tai thỏ/thanh home, hộp thoại trượt từ dưới lên, nút Quay lại Android đóng hộp thoại.
+- **Thông báo đẩy** (Web Push, mã hóa RFC 8291, xác thực VAPID) kể cả khi tắt app: Chủ nhận yêu cầu duyệt giá, tiền về lệch, HĐĐT lỗi, **hàng chạm ngưỡng tồn tối thiểu** (kèm tên xưởng để gọi nhập); Thợ nhận kết quả duyệt.
+- App gốc có màn chọn địa chỉ máy chủ, gửi báo giá/phiếu qua bảng chia sẻ (Zalo, tin nhắn).
 
 **Quản trị và kiểm toán**
 - 3 vai trò Chủ / Thợ / Quản trị; Thợ không bao giờ nhận được giá vốn hay giá sàn từ API.
@@ -96,17 +103,18 @@ Tài liệu bàn giao chi tiết của bản 2: [HUONG_DAN_V2.md](HUONG_DAN_V2.m
 ## 3. Cấu trúc thư mục
 
 ```text
-database/migrations/      001 bảng & ràng buộc · 002 trigger · 003 chỉ mục tìm kiếm & view · 004 thông số chi tiết · 005 ảnh bộ sản phẩm · 006 từ đồng nghĩa hai phía
+database/migrations/      001 bảng & ràng buộc · 002 trigger · 003 chỉ mục tìm kiếm & view · 004 thông số chi tiết · 005 ảnh bộ sản phẩm · 006 từ đồng nghĩa hai phía · 007 thông báo đẩy & cảnh báo tồn
 backend/
   app/
     domain/               dimension.py, pricing.py, vietqr.py, text.py
-    adapters/             einvoice.py, payment.py, storage.py, notify.py
-    services/             catalog, inventory, orders, payments, invoices, devices, sync, reports, audit…
+    adapters/             einvoice.py, payment.py, storage.py, notify.py, webpush.py
+    services/             catalog, inventory, orders, payments, invoices, devices, sync, reports, audit, day (thông báo đẩy)…
     routers/              auth, catalog, inventory, sales, payments, invoices, system
     main.py               ứng dụng FastAPI + phục vụ PWA
     worker.py             Retry Worker
     bootstrap.py          tạo role/CSDL, migrate, seed
     seed.py               dữ liệu mẫu
+    hang_mau_bo_sung.py   30 mặt hàng gỗ mẫu bổ sung
     nhap_kiotviet.py      nhập danh mục từ file KiotViet (CSV)
   tests/                  pytest
   scripts/smoke.py        kịch bản đầu-cuối trên hệ thống đang chạy
@@ -116,9 +124,14 @@ frontend/
   src/components/         hộp thoại, mã QR, form sửa hàng hóa…
   src/lib/                bản JS của bộ đọc kích thước & công thức giá (khớp backend), tìm kiếm ngoại tuyến
   src/db.js, sync.js      IndexedDB và đồng bộ đơn ngoại tuyến
+  src/nen-tang.js         khác biệt web / PWA / app gốc: địa chỉ máy chủ, chia sẻ, nút Quay lại Android
+  src/day.js              bật/tắt thông báo đẩy; public/day-thong-bao.js nhận thông báo trong Service Worker
+  android/, ios/          dự án gốc Capacitor (Android Studio, Xcode)
+  scripts/tao-bieu-tuong.mjs  sinh biểu tượng & màn chờ PWA/Android/iOS từ public/icon.svg
 scripts/                  setup.ps1, start.ps1, test.ps1, demo-public.ps1
 docker-compose.yml        db + api + worker
 HUONG_DAN_V2.md           tài liệu bàn giao chi tiết
+HUONG_DAN_APP_DI_DONG.md  cài app trên điện thoại, build APK/iOS, thông báo đẩy, kịch bản kiểm thử di động
 ```
 
 ## 4. Cài đặt và chạy
@@ -126,7 +139,7 @@ HUONG_DAN_V2.md           tài liệu bàn giao chi tiết
 ### Yêu cầu
 
 - Python 3.11 trở lên
-- Node.js 20 trở lên
+- Node.js 22 trở lên (công cụ đóng gói app Capacitor cần bản 22)
 - PostgreSQL 17 (trên Windows có thể cài bằng `winget install PostgreSQL.PostgreSQL.17`; các script mặc định dùng superuser `postgres` / mật khẩu `postgres`)
 
 ### Windows: cài và chạy bằng script
@@ -173,6 +186,7 @@ Các lệnh hữu ích khác:
 | `python -m app.worker --kiem-tra-toan-ven` | Chạy ngay job kiểm tra toàn vẹn |
 | `python scripts/smoke.py` | Kịch bản đầu-cuối trên hệ thống đang chạy |
 | `python -m app.nhap_kiotviet <file.csv> [--xem-truoc]` | Nhập danh mục hàng hóa xuất từ KiotViet; chạy lại không nhập trùng |
+| `python -m app.hang_mau_bo_sung [--xem-truoc]` | Thêm 30 mặt hàng gỗ mẫu (kèm xưởng, phiếu nhập, bộ, từ đồng nghĩa) vào CSDL đang dùng; chạy lại không trùng |
 
 ## 5. Tài khoản và phân quyền
 
@@ -195,6 +209,18 @@ Tài khoản trong dữ liệu mẫu (trang đăng nhập có nút chọn nhanh 
   - `#KV261026002`: tủ thờ 2m4 = 5.328.000 đ, đã cọc 2 triệu.
   - `#KV261027005`: chuyển khoản 17,0 triệu cho đơn 17,2 triệu (lệch tiền).
   - `#KV261027006`: Thợ xin bán dưới giá sàn, chờ Chủ duyệt.
+- **30 mặt hàng gỗ bổ sung** (`backend/app/hang_mau_bo_sung.py`), giá bán tham khảo mặt bằng bán lẻ trên Shopee, Chợ Tốt và
+  các trang nội thất tháng 11/2026:
+  - Bàn thờ treo/đứng, sập thờ Gỗ Gụ.
+  - Giường Xoan đào / kiểu Nhật / Cao su / Gõ đỏ.
+  - Tủ áo, tủ đầu giường, tủ giày, tủ rượu, kệ sách, kệ tivi.
+  - Sofa văng, bàn trà, bộ Âu Á, bàn ăn và ghế Cao su, bàn làm việc, bàn trang điểm, đôn.
+  - Tủ MDF.
+  - 3 mặt hàng đặt riêng: tủ bếp theo mét dài, giường tầng theo bậc, tủ âm tường theo m².
+
+  Lệnh này còn thêm 2 xưởng mới (Đồng Kỵ, Thuận An), 3 loại gỗ (Cao su, Thông, Gụ), 2 bộ (bàn ăn 4 ghế, sofa kèm bàn trà) và 6 từ đồng nghĩa ("bàn uống nước", "tab đầu giường"…). Tồn đầu vào qua 5 phiếu nhập. Hai mặt hàng được cố ý để dưới ngưỡng tồn tối thiểu để thấy cảnh báo sắp hết.
+
+  `bootstrap` nạp phần này cùng dữ liệu mẫu (bỏ qua bằng `--khong-hang-bo-sung`). CSDL đang dùng thì chạy `python -m app.hang_mau_bo_sung [--xem-truoc]`; lệnh này không tạo trùng, không ghi đè.
 
 ## 7. Thiết kế dữ liệu và các bảo đảm toàn vẹn
 
@@ -219,12 +245,13 @@ Toàn bộ API có tài liệu tương tác tại `/docs` (OpenAPI). Các nhóm 
 | Nhóm | Tiền tố | Ví dụ |
 |---|---|---|
 | Tài khoản | `/api/auth`, `/api/tai-khoan` | `POST /api/auth/dang-nhap`, `POST /api/auth/doi-mat-khau` |
-| Hàng hóa & giá | `/api/hang-hoa` | `GET /tim-kiem?q=giuong 1m8 soi`, `POST /bien-the`, `PATCH /bien-the/{id}`, `POST /bien-the/{id}/gia`, `POST /bien-the/{id}/tinh-gia` |
+| Hàng hóa & giá | `/api/hang-hoa` | `GET /tim-kiem?q=giuong 1m8 soi`, `POST /bien-the`, `PATCH /bien-the/{id}`, `POST /bien-the/{id}/gia`, `POST /bien-the/{id}/tinh-gia`, `PUT /bien-the/{id}/cong-thuc`, `PUT /he-so-go` |
 | Kho & xưởng | `/api/kho` | `POST /phieu-nhap`, `POST /kiem-ke`, `POST /xuong`, `GET /so-cai` |
 | Bán hàng | `/api/don-hang`, `/api/bao-gia` | `POST /api/don-hang` (header `Idempotency-Key`), `POST /{id}/tra-hang`, `GET /api/public/bao-gia/{ma}` |
 | Thanh toán & đối soát | `/api/don-hang/{id}/…`, `/api/doi-soat`, `/api/chot-ngay` | `POST /api/webhook/payos`, `POST /api/thiet-bi/giao-dich` (ký HMAC) |
 | Hóa đơn điện tử | `/api/hoa-don` | `POST /{id}/thu-lai`, `GET /goi-du-lieu` |
 | Hệ thống | `/api` | `GET /tong-quan`, `GET /nhat-ky/kiem-tra`, `GET /sync/danh-muc`, `POST /sync/don-hang` |
+| Thông báo đẩy | `/api/day` | `GET /khoa` (khóa VAPID công khai), `POST /dang-ky`, `POST /huy`, `GET /may`, `POST /thu` |
 | Realtime | `/ws?token=…` | WebSocket, sự kiện lọc theo vai trò |
 
 Lỗi nghiệp vụ trả về dạng `{"loi": "MA_LOI", "thong_bao": "…", "chi_tiet": …}`.
@@ -245,6 +272,8 @@ Lỗi nghiệp vụ trả về dạng `{"loi": "MA_LOI", "thong_bao": "…", "ch
 | `STORAGE_PROVIDER` | `LOCAL` | `LOCAL` hoặc `S3` (S3, Cloudinary S3 API, MinIO, R2) |
 | `ZALO_OA_ACCESS_TOKEN`, `SENDGRID_API_KEY` | trống | Để trống thì thông báo chỉ ghi log |
 | `HOLD_TTL_MINUTES`, `JWT_TTL_MINUTES`, `INTEGRITY_CHECK_HOUR` | 30, 720, 2 | Thời gian giữ chỗ, hạn phiên, giờ chạy kiểm tra đêm |
+| `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | trống | Khóa ký thông báo đẩy; trống thì tự sinh một lần, lưu trong CSDL |
+| `CORS_ORIGINS` | `capacitor://localhost,https://localhost,http://localhost` | Origin của app Android/iOS được gọi API |
 
 ## 10. Kiểm thử
 
@@ -263,9 +292,15 @@ Pytest tự dựng một CSDL riêng `khanhvan_test` (migrate + seed) mỗi lầ
 | `test_business_flows.py` | Bộ sản phẩm, chống bán vượt tồn, TTL giữ chỗ, giá vốn bình quân, giá sàn mềm, HĐĐT, webhook trùng, lệch tiền, đối soát, offline xung đột, tìm kiếm 20.000 mặt hàng < 1 giây |
 | `test_hang_hoa_kiem_ke.py` | Thông số chi tiết, sửa thuộc tính + giá, thêm/xóa/khôi phục hàng, kiểm kê, thêm xưởng |
 | `test_api.py` | Đăng nhập, phân quyền, idempotency, webhook có chữ ký, ghép nối thiết bị HMAC, báo giá công khai, đồng bộ offline |
+| `test_thong_bao_day.py` | Mã hóa Web Push khớp từng byte bộ mẫu RFC 8291, JWT VAPID, đăng ký theo máy, đẩy đúng người theo sự kiện, tồn dưới ngưỡng nhắc 1 lần/ngày, máy gỡ app (410), lỗi tạm thời thử lại, CORS cho app |
+| `test_cong_thuc_gia.py` | Kiểm tra công thức Chủ khai báo, sửa đơn giá/hệ số gỗ áp dụng ngay, đơn cũ giữ bản chụp, chuyển hàng hết tồn sang đặt riêng, chỉ Chủ được sửa |
+| `test_kiotviet.py`, `test_nhap_kiotviet.py` | Đọc file KiotViet, từ chối file mất dấu, nhập không trùng |
+| `test_hang_mau_bo_sung.py` | 30 mặt hàng bổ sung: dữ liệu hợp lệ (giá nhập < sàn ≤ niêm yết), sổ cái / giá vốn / công nợ xưởng đúng, chạy lại không trùng, giá hàng đặt riêng, tìm bằng từ thường gọi, bán theo bộ |
 | `frontend/src/lib/lib.test.js` | Bản JS của bộ đọc kích thước & công thức giá cho kết quả giống backend |
+| `frontend/src/lib/may-chu.test.js` | Chuẩn hóa địa chỉ máy chủ app gõ vào (tự thêm https/http), ghép URL API và WebSocket |
 
-Kết quả lần chạy gần nhất: **141 test pytest + 15 test vitest đều đạt.**
+Kết quả lần chạy gần nhất (21/11/2026): **223 test pytest + 31 test vitest đều đạt.** Giao diện điện thoại được kiểm thử
+tự động bằng Edge giả lập iPhone/Android, xem mục 8 của [HUONG_DAN_APP_DI_DONG.md](HUONG_DAN_APP_DI_DONG.md).
 
 ## 11. Tích hợp bên ngoài
 
@@ -299,4 +334,5 @@ Muốn chạy cả khi tắt máy: deploy lên Render theo [HUONG_DAN_DEPLOY_REN
 - Adapter Viettel/VNPT chưa thử với tài khoản thật; HĐĐT Mock chưa sinh PDF (báo giá và phiếu in dùng chức năng In/Lưu PDF của trình duyệt).
 - Bộ sản phẩm chưa có màn hình sửa thành phần.
 - PWA trên điện thoại trong mạng LAN cần HTTPS (Service Worker và camera chỉ chạy trên kết nối an toàn hoặc `localhost`).
+- Dự án gốc `frontend/android`, `frontend/ios` chưa được biên dịch trên máy phát triển (không có Android SDK, iOS cần Mac). Bản APK/iOS chưa có thông báo đẩy khi tắt app (cần FCM/APNs) và gửi phiếu qua chia sẻ thay vì in.
 - WebSocket truyền token qua query string nên token có thể xuất hiện trong log truy cập của máy chủ.

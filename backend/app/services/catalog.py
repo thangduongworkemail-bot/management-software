@@ -238,6 +238,73 @@ def tinh_gia_dat_rieng(conn, bien_the_id: int, kich_thuoc: str) -> dict:
     }
 
 
+COT_CONG_THUC = ("kieu", "don_gia", "phu_phi", "bac_gia", "kich_thuoc_min_mm", "kich_thuoc_max_mm",
+                 "ty_le_gia_von_phan_nghin", "ty_le_gia_san_phan_nghin")
+
+
+def doc_cong_thuc(conn, bien_the_id: int) -> dict:
+    """Công thức hiện tại (None nếu chưa có) kèm loại gỗ và hệ số gỗ của mặt hàng, cho màn hình cấu hình."""
+    bt = conn.execute(
+        """SELECT bt.id, bt.ma_noi_bo, bt.ten_hien_thi, bt.dat_theo_kich_thuoc, bt.loai_go,
+                  COALESCE(h.he_so_phan_nghin, 1000) AS he_so_phan_nghin
+           FROM bien_the bt LEFT JOIN he_so_go h ON h.loai_go = bt.loai_go WHERE bt.id = %s""",
+        (bien_the_id,)).fetchone()
+    if not bt:
+        raise khong_tim_thay("biến thể")
+    ct = conn.execute(f"SELECT {', '.join(COT_CONG_THUC)} FROM cong_thuc_gia WHERE bien_the_id = %s",
+                      (bien_the_id,)).fetchone()
+    return {**bt, "cong_thuc": ct}
+
+
+def luu_cong_thuc(conn, nguoi: NguoiDung, bien_the_id: int, du_lieu: dict) -> dict:
+    """Chủ tạo/sửa công thức giá hàng đặt kích thước riêng ngay trên giao diện (FR-02).
+
+    Đơn và báo giá đã lập giữ bản chụp giá nên không bị ảnh hưởng. Mặt hàng thường được chuyển
+    sang "đặt theo kích thước" chỉ khi không còn tồn và không đang giữ chỗ (hàng đặt làm không quản lý tồn).
+    """
+    bt = conn.execute("SELECT id, ma_noi_bo, dat_theo_kich_thuoc FROM bien_the WHERE id = %s FOR UPDATE",
+                      (bien_the_id,)).fetchone()
+    if not bt:
+        raise khong_tim_thay("biến thể")
+    try:
+        ct = pricing.kiem_tra_cong_thuc(pricing.CongThucGia(**{k: du_lieu[k] for k in COT_CONG_THUC if k in du_lieu}))
+    except (pricing.LoiCongThuc, TypeError) as e:
+        raise LoiNghiepVu("CONG_THUC_KHONG_HOP_LE", str(e)) from e
+    if not bt["dat_theo_kich_thuoc"]:
+        ton = conn.execute("SELECT ton_hien_co, dang_giu_cho FROM v_ton_kho WHERE bien_the_id = %s",
+                           (bien_the_id,)).fetchone()
+        if ton and (ton["ton_hien_co"] or ton["dang_giu_cho"]):
+            raise LoiNghiepVu("CON_TON_KHO", "Mặt hàng còn tồn kho hoặc đang giữ chỗ. Kiểm kê về 0 trước khi "
+                                            "chuyển sang bán theo kích thước đặt riêng.")
+        conn.execute("UPDATE bien_the SET dat_theo_kich_thuoc = TRUE WHERE id = %s", (bien_the_id,))
+
+    truoc = conn.execute(f"SELECT {', '.join(COT_CONG_THUC)} FROM cong_thuc_gia WHERE bien_the_id = %s",
+                         (bien_the_id,)).fetchone()
+    gia_tri = {k: getattr(ct, k) for k in COT_CONG_THUC} | {"bac_gia": Jsonb(ct.bac_gia)}
+    sau = conn.execute(
+        f"""INSERT INTO cong_thuc_gia (bien_the_id, {', '.join(COT_CONG_THUC)})
+            VALUES (%(id)s, {', '.join(f'%({k})s' for k in COT_CONG_THUC)})
+            ON CONFLICT (bien_the_id) DO UPDATE SET {', '.join(f'{k} = EXCLUDED.{k}' for k in COT_CONG_THUC)}
+            RETURNING {', '.join(COT_CONG_THUC)}""", {**gia_tri, "id": bien_the_id}).fetchone()
+    audit.ghi(conn, nguoi, "SUA_CONG_THUC_GIA" if truoc else "TAO_CONG_THUC_GIA", "BIEN_THE", bien_the_id,
+              truoc=truoc, sau={**sau, "ma_noi_bo": bt["ma_noi_bo"]})
+    return doc_cong_thuc(conn, bien_the_id)
+
+
+def dat_he_so_go(conn, nguoi: NguoiDung, loai_go: str, he_so_phan_nghin: int) -> dict:
+    """Thêm loại gỗ mới hoặc đổi hệ số (1200 = 1,2). Áp dụng cho mọi mặt hàng làm bằng loại gỗ đó."""
+    loai_go = loai_go.strip()
+    if not loai_go:
+        raise LoiNghiepVu("THIEU_LOAI_GO", "Nhập tên loại gỗ")
+    truoc = conn.execute("SELECT * FROM he_so_go WHERE loai_go = %s", (loai_go,)).fetchone()
+    sau = conn.execute(
+        """INSERT INTO he_so_go (loai_go, he_so_phan_nghin) VALUES (%s, %s)
+           ON CONFLICT (loai_go) DO UPDATE SET he_so_phan_nghin = EXCLUDED.he_so_phan_nghin RETURNING *""",
+        (loai_go, he_so_phan_nghin)).fetchone()
+    audit.ghi(conn, nguoi, "DAT_HE_SO_GO", "HE_SO_GO", loai_go, truoc=truoc, sau=sau)
+    return sau
+
+
 # ---------------------------------------------------------------------------
 # Từ đồng nghĩa & danh mục mới
 # ---------------------------------------------------------------------------

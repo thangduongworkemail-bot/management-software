@@ -80,6 +80,16 @@ class Settings:
     sendgrid_api_key: str = field(default_factory=lambda: _env("SENDGRID_API_KEY", ""))
     sendgrid_from: str = field(default_factory=lambda: _env("SENDGRID_FROM", "no-reply@khanhvan.vn"))
 
+    # Thông báo đẩy Web Push tới PWA đã cài trên điện thoại/máy tính (iOS 16.4+, Android, Chrome/Edge).
+    # Để trống VAPID_PRIVATE_KEY thì hệ thống tự sinh một lần và lưu trong bảng cau_hinh_he_thong.
+    vapid_private_key: str = field(default_factory=lambda: _env("VAPID_PRIVATE_KEY", ""))
+    vapid_subject: str = field(default_factory=lambda: _env("VAPID_SUBJECT", ""))
+
+    # App Android/iOS (Capacitor) chạy giao diện từ origin riêng rồi gọi API sang máy chủ cửa hàng
+    cors_origins: tuple[str, ...] = field(default_factory=lambda: tuple(
+        o.strip() for o in _env("CORS_ORIGINS", "capacitor://localhost,https://localhost,http://localhost").split(",")
+        if o.strip()))
+
     # Worker
     integrity_check_hour: int = field(default_factory=lambda: int(_env("INTEGRITY_CHECK_HOUR", "2")))
 

@@ -26,7 +26,7 @@ PostgreSQL 17 is expected on `localhost:5432` with superuser `postgres`/`postgre
 ```powershell
 $py = 'C:\ProgramData\miniconda3\envs\ai_signal\python.exe'; $env:PYTHONIOENCODING = 'utf-8'
 # all from backend/
-& $py -m app.bootstrap [--reset]               # create role+db, migrate, seed; --reset wipes and reseeds
+& $py -m app.bootstrap [--reset]               # create role+db, migrate, seed (+30 extra products unless --khong-hang-bo-sung); --reset wipes and reseeds
 & $py -m app.migrate                           # apply new migrations only
 & $py -m uvicorn app.main:app --port 8000      # API + built PWA from frontend/dist -> http://localhost:8000 (/docs)
 & $py -m app.worker [--mot-lan | --kiem-tra-toan-ven]   # background jobs (once / integrity check now)
@@ -34,11 +34,13 @@ $py = 'C:\ProgramData\miniconda3\envs\ai_signal\python.exe'; $env:PYTHONIOENCODI
 & $py -m pytest tests/test_business_flows.py::test_lech_tien_va_chap_nhan_giam
 & $py scripts/smoke.py                         # end-to-end check against a running server
 & $py -m app.nhap_kiotviet <file.csv> [--xem-truoc]   # import a KiotViet product export (preview = rollback)
+& $py -m app.hang_mau_bo_sung [--xem-truoc]           # add the 30 extra wood products to an existing DB (idempotent)
 & $py -X utf8 -m pytest --noconftest tests/test_kiotviet.py tests/test_dimension_parser.py   # pure tests, no DB
 ```
 
 - Tests: `conftest.py` forces `DATABASE_URL=.../khanhvan_test`, `DEV_MODE=1` and the mock e-invoice provider, then rebuilds that database each session. If PostgreSQL is unreachable the DB tests are **skipped, not failed**, so check the skip count. Each `conn`-fixture test runs inside a transaction that is rolled back, while `test_api.py` commits through the real pool.
 - Frontend (from `frontend/`; Node is at `C:\Program Files\nodejs`): `npm run build`, `npm run dev` (Vite on :5173 proxies `/api` and `/ws` to :8000, override with `API_URL`), `npx vitest run`.
+- Mobile (from `frontend/`, Node 22+): `npm run icons` regenerates every PWA/Android/iOS icon and splash from `public/icon.svg`; `npm run app:sync` builds and copies into `android/` and `ios/` (Capacitor 8, iOS via SPM); `npm run app:android` / `app:ios` also open Android Studio / Xcode. `VITE_MAY_CHU=https://…` bakes a default server into native builds. Details in `HUONG_DAN_APP_DI_DONG.md`.
 - Docker: `docker compose up -d --build` (build context is the repo root; the image builds the PWA and runs `app.bootstrap` on start).
 - Cloudflare Tunnel (the app runs on a local Windows machine, either through a Quick Tunnel from `demo-public.ps1` or a named tunnel with a domain): `HUONG_DAN_DEPLOY_CLOUDFLARE.md`.
 - Render: `HUONG_DAN_DEPLOY_RENDER.md`. A single Docker web service runs the API and the worker together, because a Render disk attaches to only one service and the worker writes files. The Docker Command override binds `$PORT`. Set `TZ=ICT-7`, because `codes.py` uses `date.today()`.
@@ -56,6 +58,8 @@ $py = 'C:\ProgramData\miniconda3\envs\ai_signal\python.exe'; $env:PYTHONIOENCODI
 - **Order lifecycle** (`services/orders.py`): `trang_thai` (payment) and `trang_thai_giao` (delivery) are separate columns. `orders.chot_don()` is the single "sale closed" path. In one transaction it exports stock, writes `phieu_ban_hang` and inserts the `hoa_don_dt` queue row. All payment paths (cash, manual confirm, webhook, device, accept-discount, approval) reach it via `payments.ghi_nhan_thanh_toan` or call it directly.
 - **Role filtering**: THO must never receive `gia_von`/`gia_san`. Use `catalog.an_gia_noi_bo()` / `NguoiDung.xem_gia_von`, and check new endpoints for this.
 - **Realtime**: services call `events.phat()` (pg_notify, delivered only on commit). `realtime.py` LISTENs in a thread and pushes to WebSocket clients filtered by role or user.
+- **Mobile app**: the same Vue build runs as a web page, an installed PWA, and a Capacitor native app. Native shells serve the UI from `capacitor://localhost` / `https://localhost`, so every server URL (`/api`, `/files`, `/ws`, public quote links) must go through `urlMayChu()` / `urlCongKhai()` / `urlRealtime()` in `frontend/src/nen-tang.js`; a bare `fetch('/api/…')` or `:src="x.anh_url"` breaks the native app. The backend allows those origins via `CORS_ORIGINS`. The service worker is registered only on web (`main.js`), and `public/day-thong-bao.js` is imported into it for push.
+- **Web Push**: `events.phat()` also calls `services/day.xep_hang_theo_su_kien`, which queues one `thong_bao` row (kenh `PUSH`) per subscribed device for event types in `day.SU_KIEN_DAY`. The Worker sends them through `adapters/webpush.py` (RFC 8291 aes128gcm + RFC 8292 VAPID, `cryptography` only); 404/410 deletes the subscription. The VAPID key is auto-generated into `cau_hinh_he_thong` unless `VAPID_PRIVATE_KEY` is set. Low-stock alerts (`inventory.canh_bao_ton_thap`, deduped 24 h via `canh_bao_ton`) run from the Worker.
 - **External integrations** sit behind adapters in `app/adapters/`. Mock e-invoice, VietQR, PayOS signature and S3 SigV4 are tested. The Viettel/VNPT adapters have never been run against real accounts.
 - **Offline**: `frontend/src/db.js` (Dexie) caches the catalog from `/api/sync/danh-muc`. Offline orders carry a UUID idempotency key and are pushed to `/api/sync/don-hang`. `frontend/src/lib/dimension.js` and `pricing.js` are JS ports of `backend/app/domain/*.py`, so keep both in sync (the vitest cases mirror the pytest cases).
 

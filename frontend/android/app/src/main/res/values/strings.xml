@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Khanh Vân</string>
+    <string name="title_activity_main">Khanh Vân</string>
+    <string name="package_name">vn.khanhvan.banhang</string>
+    <string name="custom_url_scheme">vn.khanhvan.banhang</string>
+</resources>

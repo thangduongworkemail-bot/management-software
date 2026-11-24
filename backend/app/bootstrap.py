@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 import psycopg
 from psycopg import sql
 
-from . import db, migrate, seed
+from . import db, hang_mau_bo_sung, migrate, seed
 from .config import settings
 
 log = logging.getLogger("khanhvan.bootstrap")
@@ -43,7 +43,10 @@ def xoa_schema(url: str) -> None:
     log.info("Đã xóa sạch schema public")
 
 
-def dung(url: str | None = None, reset: bool = False, co_seed: bool = True, super_url: str | None = None) -> None:
+def dung(url: str | None = None, reset: bool = False, co_seed: bool = True, super_url: str | None = None,
+         hang_bo_sung: bool = False) -> None:
+    """hang_bo_sung=True: CSDL mới nạp thêm 30 mặt hàng gỗ của hang_mau_bo_sung sau dữ liệu mẫu. Test để False
+    để giữ đúng bộ dữ liệu mẫu bám báo cáo."""
     url = url or settings.database_url
     super_url = super_url or os.environ.get("PG_SUPERUSER_URL", "postgresql://postgres:postgres@localhost:5432/postgres")
     try:
@@ -58,6 +61,11 @@ def dung(url: str | None = None, reset: bool = False, co_seed: bool = True, supe
             trong = conn.execute("SELECT count(*) AS n FROM tai_khoan").fetchone()["n"] == 0
         if trong:
             seed.nap(url)
+            if hang_bo_sung:
+                with db.connect(url) as conn:
+                    with conn.transaction():
+                        so_hang = len(hang_mau_bo_sung.nap(conn)["mat_hang"])
+                log.info("Đã nạp thêm %s mặt hàng bổ sung", so_hang)
         else:
             log.info("CSDL đã có dữ liệu, bỏ qua seed (dùng --reset để nạp lại)")
 
@@ -67,6 +75,7 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--reset", action="store_true")
     p.add_argument("--khong-seed", action="store_true")
+    p.add_argument("--khong-hang-bo-sung", action="store_true", help="chỉ nạp dữ liệu mẫu gốc, không thêm 30 mặt hàng")
     a = p.parse_args()
-    dung(reset=a.reset, co_seed=not a.khong_seed)
+    dung(reset=a.reset, co_seed=not a.khong_seed, hang_bo_sung=not a.khong_hang_bo_sung)
     print("Xong. CSDL sẵn sàng tại", settings.database_url.rsplit("@", 1)[-1])

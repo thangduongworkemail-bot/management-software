@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { put, taiFileLen } from '../api'
 import { thuNhoAnh } from '../lib/anh'
+import { urlMayChu } from '../nen-tang'
 import { bao, laChu } from '../store'
 
 // Ảnh minh họa của một mặt hàng (biến thể hoặc bộ). Mặc định là ô nhỏ trong bảng danh mục;
@@ -41,7 +42,7 @@ function goAnh() {
 
 <template>
   <div v-if="!lon" class="w-14 h-14">
-    <img v-if="coAnh" :src="hang.anh_url" :alt="hang.ten" width="56" height="56" loading="lazy" decoding="async"
+    <img v-if="coAnh" :src="urlMayChu(hang.anh_url)" :alt="hang.ten" width="56" height="56" loading="lazy" decoding="async"
       class="w-14 h-14 rounded-lg object-cover border border-slate-200 bg-white" @error="hong = true" />
     <button v-else-if="laChu()" type="button" :disabled="dangTai" :aria-label="`Thêm ảnh minh họa cho ${hang.ten}`"
       class="w-14 h-14 rounded-lg border-2 border-dashed border-slate-400 text-xs font-bold text-slate-600 leading-tight
@@ -52,7 +53,7 @@ function goAnh() {
   </div>
 
   <div v-else-if="coAnh || laChu()" class="space-y-2">
-    <img v-if="coAnh" :src="hang.anh_url" :alt="hang.ten" decoding="async"
+    <img v-if="coAnh" :src="urlMayChu(hang.anh_url)" :alt="hang.ten" decoding="async"
       class="w-full max-h-80 object-contain rounded-lg bg-than-nhat" @error="hong = true" />
     <div v-else class="h-32 rounded-lg border-2 border-dashed border-slate-300 grid place-items-center text-sm text-slate-600">
       Chưa có ảnh minh họa</div>

@@ -4,7 +4,8 @@
     python -m app.worker --mot-lan  # chạy mỗi tác vụ một lần rồi thoát
 
 Tác vụ: gửi HĐĐT trong hàng đợi (thử lại khi lỗi), nhả giữ chỗ hết hạn TTL 30 phút,
-gửi thông báo, cảnh báo Máy nhận tiền mất báo sống, kiểm tra toàn vẹn dữ liệu hằng đêm.
+gửi thông báo (Zalo/Email/đẩy tới app điện thoại), cảnh báo Máy nhận tiền mất báo sống,
+cảnh báo tồn dưới ngưỡng tối thiểu, kiểm tra toàn vẹn dữ liệu hằng đêm.
 """
 import argparse
 import logging
@@ -15,7 +16,7 @@ from datetime import datetime, timedelta
 from . import db
 from .adapters import notify
 from .config import settings
-from .services import audit, events, invoices, orders
+from .services import audit, day, events, inventory, invoices, orders
 
 log = logging.getLogger("khanhvan.worker")
 
@@ -49,7 +50,10 @@ def gui_thong_bao(toi_da: int = 20) -> int:
                ORDER BY id LIMIT %s FOR UPDATE SKIP LOCKED""", (toi_da,)).fetchall()
         for tb in hang:
             try:
-                notify.gui(tb["kenh"], tb["nguoi_nhan"], tb["tieu_de"], tb["noi_dung"])
+                if tb["kenh"] == "PUSH":
+                    day.gui_thong_bao(conn, tb)
+                else:
+                    notify.gui(tb["kenh"], tb["nguoi_nhan"], tb["tieu_de"], tb["noi_dung"])
                 conn.execute("UPDATE thong_bao SET trang_thai = 'DA_GUI', so_lan_thu = so_lan_thu + 1 WHERE id = %s",
                              (tb["id"],))
                 so += 1
@@ -77,6 +81,14 @@ def kiem_tra_bao_song() -> list[str]:
                 events.phat(conn, "MAY_NHAN_TIEN_MAT_KET_NOI", {"thiet_bi_id": tb["id"], "ten": tb["ten"]},
                             vai_tro=["CHU"])
     return [t["ten"] for t in mat]
+
+
+def canh_bao_ton_thap() -> list[str]:
+    with db.transaction() as conn:
+        moi = inventory.canh_bao_ton_thap(conn)
+    if moi:
+        log.info("Tồn dưới ngưỡng: %s", ", ".join(h["ma"] for h in moi))
+    return [h["ma"] for h in moi]
 
 
 def kiem_tra_toan_ven() -> dict:
@@ -124,6 +136,7 @@ LICH = [  # (chu kỳ giây, tác vụ)
     (15, nha_giu_cho),
     (10, gui_thong_bao),
     (60, kiem_tra_bao_song),
+    (60, canh_bao_ton_thap),
     (300, lambda: den_gio_kiem_tra_dem() and kiem_tra_toan_ven()),
 ]
 

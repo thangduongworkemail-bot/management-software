@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 import psycopg
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -29,6 +30,13 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Hệ thống Quản lý & Bán hàng Nội thất Khanh Vân", version="2.0.0", lifespan=lifespan)
+
+# App Android/iOS (Capacitor) chạy giao diện ở capacitor://localhost hoặc https://localhost rồi gọi API sang
+# máy chủ cửa hàng. Xác thực bằng header Bearer (không dùng cookie) nên không bật allow_credentials.
+if settings.cors_origins:
+    app.add_middleware(CORSMiddleware, allow_origins=list(settings.cors_origins), allow_credentials=False,
+                       allow_methods=["*"], allow_headers=["Authorization", "Content-Type", "Idempotency-Key"],
+                       max_age=86400)
 
 
 @app.exception_handler(LoiNghiepVu)

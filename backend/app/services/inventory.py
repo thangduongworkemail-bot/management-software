@@ -10,7 +10,7 @@ from fractions import Fraction
 
 from ..errors import LoiNghiepVu, khong_tim_thay
 from ..security import NguoiDung
-from . import audit, codes
+from . import audit, codes, events
 
 
 def khoa_bien_the(conn, ids) -> None:
@@ -268,6 +268,33 @@ def ton_theo_xuong(conn) -> list[dict]:
            LEFT JOIN bien_the bt ON bt.id = mx.bien_the_id
            LEFT JOIN v_ton_kho t ON t.bien_the_id = mx.bien_the_id
            GROUP BY ncc.id ORDER BY ncc.id""").fetchall()
+
+
+def canh_bao_ton_thap(conn) -> list[dict]:
+    """Worker gọi định kỳ: báo Chủ những mặt hàng có tồn khả dụng chạm ngưỡng tối thiểu (FR-06).
+
+    Mỗi mặt hàng được báo tối đa một lần mỗi 24 giờ; nhập đủ lại thì xóa dấu để lần tụt sau báo ngay.
+    Kèm tên xưởng ưu tiên để Chủ biết gọi ai nhập thêm.
+    """
+    conn.execute(
+        """DELETE FROM canh_bao_ton c USING bien_the bt, v_ton_kho t
+           WHERE bt.id = c.bien_the_id AND t.bien_the_id = c.bien_the_id
+             AND (NOT bt.dang_ban OR t.ton_kha_dung > bt.ton_toi_thieu)""")
+    moi = conn.execute(
+        """SELECT bt.id, bt.ma_noi_bo AS ma, bt.ten_hien_thi AS ten, bt.ton_toi_thieu, t.ton_kha_dung,
+                  (SELECT ncc.ten FROM ma_xuong mx JOIN nha_cung_cap ncc ON ncc.id = mx.nha_cung_cap_id
+                   WHERE mx.bien_the_id = bt.id ORDER BY mx.uu_tien LIMIT 1) AS xuong
+           FROM bien_the bt JOIN v_ton_kho t ON t.bien_the_id = bt.id
+           WHERE bt.dang_ban AND NOT bt.dat_theo_kich_thuoc AND t.ton_kha_dung <= bt.ton_toi_thieu
+             AND NOT EXISTS (SELECT 1 FROM canh_bao_ton c WHERE c.bien_the_id = bt.id
+                             AND c.canh_bao_luc > now() - interval '24 hours')
+           ORDER BY t.ton_kha_dung, bt.ma_noi_bo""").fetchall()
+    if moi:
+        conn.execute(
+            """INSERT INTO canh_bao_ton (bien_the_id) SELECT unnest(%s::int[])
+               ON CONFLICT (bien_the_id) DO UPDATE SET canh_bao_luc = now()""", ([h["id"] for h in moi],))
+        events.phat(conn, "TON_DUOI_NGUONG", {"danh_sach": moi}, vai_tro=["CHU"])
+    return moi
 
 
 def sap_het(conn) -> list[dict]:

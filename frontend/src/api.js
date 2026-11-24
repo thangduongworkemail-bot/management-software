@@ -1,3 +1,4 @@
+import { urlMayChu } from './nen-tang'
 import { dangXuat, trangThai } from './store'
 
 export class LoiApi extends Error {
@@ -20,7 +21,7 @@ export async function api(duongDan, { method = 'GET', body, headers = {}, tho = 
   }
   let res
   try {
-    res = await fetch(`/api${duongDan}`, { method, headers: h, body: duLieu })
+    res = await fetch(urlMayChu(`/api${duongDan}`), { method, headers: h, body: duLieu })
   } catch {
     throw new LoiApi(0, { loi: 'MAT_KET_NOI', thong_bao: 'Không kết nối được máy chủ' })
   }
@@ -42,7 +43,7 @@ export const patch = (p, body = {}) => api(p, { method: 'PATCH', body })
 /** Xin URL có chữ ký rồi PUT file thẳng lên kho lưu trữ (cục bộ hoặc S3). */
 export async function taiFileLen(file, mucDich) {
   const url = await post('/files/presign', { ten_file: file.name, muc_dich: mucDich })
-  const res = await fetch(url.upload_url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type || 'application/octet-stream' } })
+  const res = await fetch(urlMayChu(url.upload_url), { method: 'PUT', body: file, headers: { 'Content-Type': file.type || 'application/octet-stream' } })
   if (!res.ok) throw new LoiApi(res.status, { thong_bao: 'Tải file lên thất bại' })
   return url.file_url
 }

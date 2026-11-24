@@ -2,6 +2,7 @@
 import { onMounted, ref, watch } from 'vue'
 import { get, post } from '../api'
 import { ngayGio, tien } from '../lib/format'
+import { laAppGoc } from '../nen-tang'
 import { bao, laChu, trangThai, xemGiaVon } from '../store'
 import HopThoai from '../components/HopThoai.vue'
 import HuyHieu from '../components/HuyHieu.vue'
@@ -117,7 +118,7 @@ function thuTien(laCoc) {
           </template>
           <button v-if="!['DA_THANH_TOAN', 'DA_HUY'].includes(chiTiet.trang_thai)" class="nut-vien nut-nho" @click="huy">Hủy đơn</button>
           <button v-if="laChu() && ['DA_THANH_TOAN', 'CON_NO'].includes(chiTiet.trang_thai) && chiTiet.trang_thai_giao === 'DA_GIAO'" class="nut-vien nut-nho" @click="traHang">Khách trả hàng</button>
-          <router-link :to="`/phieu/${chiTiet.id}`" target="_blank" class="nut-vien nut-nho">In phiếu</router-link>
+          <router-link :to="`/phieu/${chiTiet.id}`" :target="laAppGoc ? undefined : '_blank'" class="nut-vien nut-nho">{{ laAppGoc ? 'Phiếu' : 'In phiếu' }}</router-link>
         </div>
       </template>
     </HopThoai>

@@ -6,6 +6,7 @@ import { docKichThuoc } from '../lib/dimension'
 import { tien, kichThuoc } from '../lib/format'
 import { tinhGia } from '../lib/pricing'
 import { timNgoaiTuyen } from '../lib/search'
+import { chiaSe, laAppGoc, urlCongKhai } from '../nen-tang'
 import { bao, laChu, trangThai } from '../store'
 import { luuDonNgoaiTuyen } from '../sync'
 import HopThoai from '../components/HopThoai.vue'
@@ -189,11 +190,13 @@ async function taoBaoGia() {
   if (!gioHang.value.length) return
   try {
     const bg = await post('/bao-gia', { dong: gioHang.value.map(dongGuiLen), khach_hang: duLieuKhach() })
-    const url = `${location.origin}/bao-gia/${bg.ma_chia_se}`
-    if (navigator.share) await navigator.share({ title: `Báo giá ${bg.ma} — Nội thất Khanh Vân`, url }).catch(() => {})
-    else await navigator.clipboard?.writeText(url)
+    const url = urlCongKhai(`/bao-gia/${bg.ma_chia_se}`)
     bao(`Đã tạo báo giá ${bg.ma} (giữ giá 7 ngày). Liên kết đã sẵn sàng chia sẻ.`, 'thanh-cong', 10)
-    window.open(url, '_blank')
+    const cach = await chiaSe({ tieuDe: `Báo giá ${bg.ma} — Nội thất Khanh Vân`,
+      noiDung: `Báo giá ${bg.ma} của Nội thất Khanh Vân, xem tại:`, url }).catch(() => 'huy')
+    if (cach === 'sao-chep') bao('Đã sao chép liên kết báo giá, dán vào Zalo để gửi khách', 'thong-tin', 8)
+    // Trong app gốc chỉ mở bảng chia sẻ; trên web mở thêm tab mới để xem lại báo giá
+    if (!laAppGoc) window.open(url, '_blank')
   } catch (e) { bao(e.message, 'loi') }
 }
 
@@ -341,7 +344,9 @@ function donMoi() {
             <span>{{ d.so_luong }} × {{ d.mo_ta }}</span><span class="font-bold">{{ tien(d.thanh_tien) }}</span>
           </li>
         </ul>
-        <router-link :to="`/phieu/${don.id}`" target="_blank" class="nut-vien w-full">In phiếu bán hàng nội bộ</router-link>
+        <router-link :to="`/phieu/${don.id}`" :target="laAppGoc ? undefined : '_blank'" class="nut-vien w-full">
+          {{ laAppGoc ? 'Phiếu bán hàng (gửi khách)' : 'In phiếu bán hàng nội bộ' }}
+        </router-link>
       </div>
       <div v-else class="the text-slate-600">Chốt đơn để hiện mã VietQR và các cách thu tiền.</div>
     </aside>

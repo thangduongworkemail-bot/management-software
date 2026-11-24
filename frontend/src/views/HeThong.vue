@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { get, post } from '../api'
 import { ngayGio } from '../lib/format'
 import { bao, trangThai } from '../store'
+import BatThongBao from '../components/BatThongBao.vue'
 
 const taiKhoan = ref([])
 const thietBi = ref([])
@@ -48,6 +49,7 @@ const TEN_LOAI = { MAY_QUAY: 'Máy tính quầy', DIEN_THOAI: 'Điện thoại',
 <template>
   <div class="grid lg:grid-cols-12 gap-4">
     <section class="lg:col-span-7 space-y-4">
+      <BatThongBao class="hidden md:block" />
       <div class="the space-y-3">
         <div class="font-extrabold">TÀI KHOẢN & PHÂN QUYỀN</div>
         <table class="bang">

@@ -2,6 +2,7 @@
 import { onMounted, ref, watch } from 'vue'
 import { get, post } from '../api'
 import { ngayGio, tien } from '../lib/format'
+import { urlMayChu } from '../nen-tang'
 import { bao, trangThai } from '../store'
 import HuyHieu from '../components/HuyHieu.vue'
 
@@ -45,7 +46,7 @@ function ghep(gd) {
             <div>{{ ngayGio(t.thoi_diem) }} • {{ t.nguoi_xac_nhan }} • Bằng chứng:
               <template v-for="b in t.bang_chung || []" :key="b.gia_tri">
                 <strong v-if="b.kieu === 'BON_SO_CUOI'">mã GD *{{ b.gia_tri }}</strong>
-                <a v-else :href="b.gia_tri" target="_blank" class="underline">ảnh biên lai</a>&nbsp;
+                <a v-else :href="urlMayChu(b.gia_tri)" target="_blank" class="underline">ảnh biên lai</a>&nbsp;
               </template>
             </div>
           </div>

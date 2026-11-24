@@ -2,6 +2,7 @@
 import { onMounted, ref, watch } from 'vue'
 import { api, get, post, put } from '../api'
 import { ngayGio, tien } from '../lib/format'
+import { urlMayChu } from '../nen-tang'
 import { bao, laChu, trangThai } from '../store'
 import HopThoai from '../components/HopThoai.vue'
 import HuyHieu from '../components/HuyHieu.vue'
@@ -71,7 +72,7 @@ function traNoXuong(x) {
               <td><HuyHieu :ma="hd.trang_thai" />
                 <div class="text-xs mt-1">
                   <template v-if="hd.so_hoa_don">Số {{ hd.ky_hieu }}-{{ hd.so_hoa_don }} • {{ ngayGio(hd.xuat_luc) }}
-                    <a v-if="hd.link_xml" :href="hd.link_xml" target="_blank" class="underline">XML</a></template>
+                    <a v-if="hd.link_xml" :href="urlMayChu(hd.link_xml)" target="_blank" class="underline">XML</a></template>
                   <template v-else-if="hd.so_lan_thu">Đã thử {{ hd.so_lan_thu }} lần<span v-if="hd.loi_cuoi"> — {{ hd.loi_cuoi }}</span></template>
                 </div></td>
               <td class="text-right whitespace-nowrap space-x-1">

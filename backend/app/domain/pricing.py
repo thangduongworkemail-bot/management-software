@@ -119,6 +119,53 @@ def tinh_gia(cong_thuc: CongThucGia, kich_thuoc_mm: list[int], loai_go: str | No
     return KetQuaGia(gia=gia, dien_giai=dien_giai, tham_so=tham_so)
 
 
+def kiem_tra_cong_thuc(ct: CongThucGia) -> CongThucGia:
+    """Kiểm tra công thức Chủ khai báo trên giao diện trước khi lưu; trả về bản đã chuẩn hóa
+    (bậc giá sắp tăng dần, bỏ trường không dùng của từng kiểu)."""
+    if ct.kieu not in (THEO_CHIEU_DAI, THEO_DIEN_TICH, THEO_BAC):
+        raise LoiCongThuc(f"Kiểu công thức không hợp lệ: {ct.kieu}")
+    _kiem_tra_so_nguyen_khong_am(phu_phi=ct.phu_phi, kich_thuoc_min_mm=ct.kich_thuoc_min_mm,
+                                 kich_thuoc_max_mm=ct.kich_thuoc_max_mm,
+                                 ty_le_gia_von_phan_nghin=ct.ty_le_gia_von_phan_nghin,
+                                 ty_le_gia_san_phan_nghin=ct.ty_le_gia_san_phan_nghin)
+    if ct.kich_thuoc_min_mm > ct.kich_thuoc_max_mm:
+        raise LoiCongThuc("Kích thước nhỏ nhất phải nhỏ hơn hoặc bằng kích thước lớn nhất")
+    if ct.ty_le_gia_san_phan_nghin > 1000 or ct.ty_le_gia_von_phan_nghin > 1000:
+        raise LoiCongThuc("Tỷ lệ giá sàn và giá vốn không được vượt 100% giá bán")
+    if ct.ty_le_gia_von_phan_nghin > ct.ty_le_gia_san_phan_nghin:
+        raise LoiCongThuc("Giá sàn phải cao hơn hoặc bằng giá vốn (tỷ lệ giá sàn ≥ tỷ lệ giá vốn)")
+
+    if ct.kieu == THEO_BAC:
+        if not ct.bac_gia:
+            raise LoiCongThuc("Bảng bậc giá cần ít nhất một bậc")
+        bac = []
+        for b in ct.bac_gia:
+            toi_da, gia = b.get("toi_da_mm"), b.get("gia")
+            _kiem_tra_so_nguyen_khong_am(toi_da_mm=toi_da, gia=gia)
+            if toi_da == 0:
+                raise LoiCongThuc("Mỗi bậc cần kích thước tối đa lớn hơn 0")
+            bac.append({"toi_da_mm": toi_da, "gia": gia})
+        bac.sort(key=lambda b: b["toi_da_mm"])
+        if len({b["toi_da_mm"] for b in bac}) != len(bac):
+            raise LoiCongThuc("Hai bậc giá trùng kích thước tối đa")
+        if any(sau["gia"] < truoc["gia"] for truoc, sau in zip(bac, bac[1:])):
+            raise LoiCongThuc("Bậc lớn hơn không được rẻ hơn bậc nhỏ hơn")
+        return CongThucGia(kieu=THEO_BAC, don_gia=None, phu_phi=0, bac_gia=bac,
+                           kich_thuoc_min_mm=ct.kich_thuoc_min_mm, kich_thuoc_max_mm=ct.kich_thuoc_max_mm,
+                           ty_le_gia_von_phan_nghin=ct.ty_le_gia_von_phan_nghin,
+                           ty_le_gia_san_phan_nghin=ct.ty_le_gia_san_phan_nghin)
+
+    if ct.don_gia is None:
+        raise LoiCongThuc("Cần nhập đơn giá" + (" trên mét dài" if ct.kieu == THEO_CHIEU_DAI else " trên m²"))
+    _kiem_tra_so_nguyen_khong_am(don_gia=ct.don_gia)
+    if ct.don_gia == 0:
+        raise LoiCongThuc("Đơn giá phải lớn hơn 0")
+    return CongThucGia(kieu=ct.kieu, don_gia=ct.don_gia, phu_phi=ct.phu_phi, bac_gia=[],
+                       kich_thuoc_min_mm=ct.kich_thuoc_min_mm, kich_thuoc_max_mm=ct.kich_thuoc_max_mm,
+                       ty_le_gia_von_phan_nghin=ct.ty_le_gia_von_phan_nghin,
+                       ty_le_gia_san_phan_nghin=ct.ty_le_gia_san_phan_nghin)
+
+
 def gia_theo_ty_le(gia: int, ty_le_phan_nghin: int) -> int:
     return lam_tron_nghin(Fraction(gia * ty_le_phan_nghin, 1000))
 
