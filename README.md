@@ -3,9 +3,10 @@
 Phần mềm bán hàng tại quầy (POS), quản lý kho nhiều xưởng, công nợ hai chiều và hóa đơn điện tử cho cửa hàng
 **Nội thất gỗ Khanh Vân** (Thái Nguyên).
 
-**Báo cáo Kỹ thuật Phần mềm Ứng dụng — Nhóm 32, Đại học Bách Khoa Hà Nội**
+**Đồ án Kỹ thuật Phần mềm Ứng dụng (ET3260) — lớp 173820, nhóm N32, Đại học Bách Khoa Hà Nội**
 Giảng viên hướng dẫn: TS. Hoàng Quang Huy
-Sinh viên thực hiện: Lê Thị Ngọc Anh (20210032) · Dương Văn Thắng (20210046) · Dương Văn Đạt (20210053)
+Thành viên (MSSV): 202414375 · 202414028 · 202413965. Hồ sơ nộp lớp nằm trong thư mục `nop_bai/`; đóng gói vào bản fork
+repo nộp bài bằng `python scripts/dong_goi_nop_bai.py <thư mục fork>`.
 
 Kho mã gồm hai thế hệ:
 
@@ -95,9 +96,9 @@ App trên điện thoại Android và iOS (PWA, APK, Xcode): [HUONG_DAN_APP_DI_D
 | Thành phần | Công nghệ |
 |---|---|
 | CSDL | PostgreSQL 17 (unaccent, pg_trgm, JSONB, trigger PL/pgSQL) |
-| Backend | Python 3.11+, FastAPI 0.115, psycopg 3 + psycopg-pool, argon2-cffi, PyJWT, httpx |
+| Backend | Python 3.11+, FastAPI 0.165 (Starlette 1.10), psycopg 3 + psycopg-pool, argon2-cffi, PyJWT 2.15, httpx |
 | Frontend | Vue 3.5, vue-router 4, Vite 6, Tailwind CSS 3, Dexie 4, vite-plugin-pwa, qrcode |
-| Kiểm thử | pytest (CSDL thật), vitest |
+| Kiểm thử | pytest (CSDL thật) + pytest-cov, vitest 5, GitHub Actions (`.github/workflows/kiem-thu.yml`) |
 | Triển khai | Script PowerShell cho Windows, Docker Compose, Cloudflare Tunnel cho bản dùng thử |
 
 ## 3. Cấu trúc thư mục
@@ -264,10 +265,10 @@ Lỗi nghiệp vụ trả về dạng `{"loi": "MA_LOI", "thong_bao": "…", "ch
 |---|---|---|
 | `DATABASE_URL` | `postgresql://khanhvan:khanhvan@localhost:5432/khanhvan` | CSDL ứng dụng |
 | `PG_SUPERUSER_URL` | `postgresql://postgres:postgres@localhost:5432/postgres` | Chỉ dùng khi bootstrap tạo role/CSDL |
-| `JWT_SECRET` | khóa dev | **Bắt buộc đổi** khi triển khai |
-| `DEV_MODE` | `1` | `1` bật nút mô phỏng tiền về; đặt `0` khi chạy thật |
+| `JWT_SECRET` | trống | Trống thì máy chủ tự sinh khóa ngẫu nhiên một lần, lưu trong bảng `cau_hinh_he_thong`; các giá trị mẫu từng ghi trong mã nguồn bị bỏ qua |
+| `DEV_MODE` | `1` | `1` bật nút mô phỏng tiền về và nút chọn nhanh tài khoản demo ở trang đăng nhập; đặt `0` khi chạy thật |
 | `VIETQR_BANK_BIN`, `VIETQR_ACCOUNT_NO`, `VIETQR_ACCOUNT_NAME` | tài khoản mẫu | Tài khoản nhận tiền in trên mã QR |
-| `PAYOS_CHECKSUM_KEY` | khóa demo | Xác thực chữ ký webhook PayOS |
+| `PAYOS_CHECKSUM_KEY` | khóa demo | Xác thực chữ ký webhook PayOS; khi `DEV_MODE=0` mà vẫn là khóa demo thì webhook trả 503 |
 | `EINVOICE_PROVIDER` | `MOCK` | `MOCK` / `VIETTEL` / `VNPT` (kèm `*_URL`, `*_USERNAME`, `*_PASSWORD`) |
 | `STORAGE_PROVIDER` | `LOCAL` | `LOCAL` hoặc `S3` (S3, Cloudinary S3 API, MinIO, R2) |
 | `ZALO_OA_ACCESS_TOKEN`, `SENDGRID_API_KEY` | trống | Để trống thì thông báo chỉ ghi log |
@@ -296,10 +297,14 @@ Pytest tự dựng một CSDL riêng `khanhvan_test` (migrate + seed) mỗi lầ
 | `test_cong_thuc_gia.py` | Kiểm tra công thức Chủ khai báo, sửa đơn giá/hệ số gỗ áp dụng ngay, đơn cũ giữ bản chụp, chuyển hàng hết tồn sang đặt riêng, chỉ Chủ được sửa |
 | `test_kiotviet.py`, `test_nhap_kiotviet.py` | Đọc file KiotViet, từ chối file mất dấu, nhập không trùng |
 | `test_hang_mau_bo_sung.py` | 30 mặt hàng bổ sung: dữ liệu hợp lệ (giá nhập < sàn ≤ niêm yết), sổ cái / giá vốn / công nợ xưởng đúng, chạy lại không trùng, giá hàng đặt riêng, tìm bằng từ thường gọi, bán theo bộ |
+| `test_bao_mat.py` | Token ký bằng khóa từng công khai bị từ chối, khóa tự sinh lưu trong CSDL, tạm khóa sau 5 lần sai mật khẩu, webhook PayOS từ chối khóa demo khi chạy thật, mọi endpoint ngoài danh sách công khai đều đòi đăng nhập |
+| `test_worker.py` | Worker xuất hết hàng đợi HĐĐT, thông báo gửi lỗi được hẹn thử lại rồi gửi được, vòng lặp chạy đủ tác vụ không lỗi, job kiểm tra toàn vẹn đạt trên CSDL test |
 | `frontend/src/lib/lib.test.js` | Bản JS của bộ đọc kích thước & công thức giá cho kết quả giống backend |
 | `frontend/src/lib/may-chu.test.js` | Chuẩn hóa địa chỉ máy chủ app gõ vào (tự thêm https/http), ghép URL API và WebSocket |
 
-Kết quả lần chạy gần nhất (21/11/2026): **223 test pytest + 31 test vitest đều đạt.** Giao diện điện thoại được kiểm thử
+Kết quả lần chạy gần nhất (24/11/2026): **236 test pytest + 31 test vitest đều đạt, không test nào bị bỏ qua; độ phủ
+backend 80 %** (`python -m pytest --cov=app`, cần `pip install pytest-cov`). Kịch bản đầu-cuối: `python scripts/smoke.py`.
+Đo thời gian phản hồi khi nhiều người dùng cùng lúc: `python scripts/do_hieu_nang.py` (kết quả trong `nop_bai/report/`). Giao diện điện thoại được kiểm thử
 tự động bằng Edge giả lập iPhone/Android, xem mục 8 của [HUONG_DAN_APP_DI_DONG.md](HUONG_DAN_APP_DI_DONG.md).
 
 ## 11. Tích hợp bên ngoài
