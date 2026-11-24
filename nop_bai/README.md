@@ -30,7 +30,7 @@
   5. **Nhật ký và điện thoại:**
      - Nhật ký thao tác nối chuỗi băm SHA-256, phát hiện sửa hoặc xóa lén.
      - PWA cài được trên Android/iOS, vẫn tra giá và lập đơn khi mất mạng.
-- **Demo:** video 3–5 phút sẽ có ở Tuần 14. **Ảnh chụp:** [docs/](docs/) (Hình 1–7 ở mục 4).
+- **Demo:** video 3–5 phút quay ở Tuần 14 theo [slides/KichBan_Video.md](slides/KichBan_Video.md). **Slide:** [slides/Slide_Tuan12.pptx](slides/Slide_Tuan12.pptx). **Ảnh chụp:** [docs/](docs/) (Hình 1–7 ở mục 4).
 
 ## 2. Phạm vi MVP
 
@@ -218,4 +218,4 @@ Cập nhật cột *Trạng thái* (⬜ chưa / 🚧 đang / ✅ xong) vào cu�
   - `BaoMat_HieuNang_v1.md`: rà soát bảo mật, đo hiệu năng, đánh giá AI (không áp dụng)
 - `docs/`: ảnh chụp màn hình dùng trong README
 - `src/`: mã nguồn bản 2
-- `slides/`: slide thuyết trình (Tuần 15)
+- `slides/`: `Slide_Tuan12.pptx` (12 slide, có ghi chú thuyết trình), `KichBan_Video.md` (kịch bản video demo)
