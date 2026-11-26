@@ -16,4 +16,6 @@ COPY backend/app ./app
 COPY database /app/database
 COPY --from=frontend /src/frontend/dist /app/frontend/dist
 EXPOSE 8000
-CMD ["sh", "-c", "python -m app.bootstrap && python -m app.migrate && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+# bootstrap (migration + seed nếu trống) → Worker chạy nền → API ở cổng $PORT (Render tự đặt; mặc định 8000).
+# docker-compose ghi đè lệnh này cho từng container api/worker.
+CMD ["python", "-m", "app.khoi_dong"]

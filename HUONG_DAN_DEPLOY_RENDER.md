@@ -33,9 +33,33 @@ Giá các gói trả phí xem tại trang Pricing của Render.
 
 ## 2. Chuẩn bị
 
-1. Code cần deploy đã được **đẩy lên GitHub**, ở nhánh sẽ deploy (mặc định `main`).
-2. Đăng ký Render bằng tài khoản GitHub. Repo đang để riêng tư, nên khi Render hỏi quyền,
-   chọn **Only select repositories → KTPMUD**. Sau này cấp thêm tại GitHub → Settings → Applications → Render → Configure.
+### Deploy đúng repo, đúng nhánh
+
+Code mới nhất **chỉ nằm ở repo `thangduongworkemail-bot/management-software`, nhánh `finnal`**. Mọi chỗ khác là bản cũ:
+
+| Repo | Nhánh | Nội dung |
+|---|---|---|
+| `thangduongworkemail-bot/management-software` | **`finnal`** | **Bản mới nhất, deploy nhánh này** |
+| `thangduongworkemail-bot/management-software` | `main` (nhánh mặc định của repo) | Bản 2 đời đầu, lịch sử commit tách rời hẳn với `finnal` |
+| `datduong41026/KTPMUD` (repo cũ) | `main`, `nhap-kiotviet-anh-minh-hoa` | Bản cũ, không còn cập nhật |
+
+Khi tạo service, Render **tự điền nhánh mặc định của repo là `main`**, tức bản cũ. Phải tự đổi sang `finnal`.
+Muốn Render tự chọn đúng: chủ repo vào GitHub → repo → **Settings** → **General** → **Default branch** → chọn `finnal`.
+
+Xem commit mới nhất của từng nhánh trên GitHub (chạy trên máy, trong thư mục dự án):
+
+```powershell
+git fetch origin
+git log -1 --oneline origin/finnal     # ví dụ: 9bdddae Slide thuyết trình và kịch bản video demo
+```
+
+### Tài khoản
+
+1. Code cần deploy đã được **đẩy lên GitHub** ở nhánh `finnal` (`git push origin finnal`). Sửa trên máy mà chưa push
+   thì Render không thấy.
+2. Đăng ký Render bằng tài khoản GitHub. Khi Render hỏi quyền, chọn **Only select repositories → management-software**.
+   Repo thuộc tài khoản `thangduongworkemail-bot`, nên nếu repo không hiện trong danh sách của Render thì chủ repo phải cấp:
+   GitHub → Settings → Applications → Render → Configure → thêm `management-software`.
 
 ## 3. Bước 1 — Tạo cơ sở dữ liệu
 
@@ -60,13 +84,13 @@ Hai extension `unaccent` và `pg_trgm` (cần cho tìm kiếm tiếng Việt) đ
 
 ## 4. Bước 2 — Tạo Web Service
 
-Dashboard → **New** → **Web Service** → chọn repo **KTPMUD**, điền:
+Dashboard → **New** → **Web Service** → chọn repo **management-software**, điền:
 
 | Ô | Điền | Ghi chú |
 |---|---|---|
-| Name | `khanhvan` | Thành địa chỉ `https://khanhvan.onrender.com`. Tên đã có người dùng thì Render tự thêm hậu tố |
+| Name | `khanhvan` | Thành địa chỉ `https://khanhvan.onrender.com`. Tên đã có người dùng (kể cả service cũ của chính mình) thì Render tự thêm hậu tố, ví dụ `khanhvan-ab12.onrender.com` |
 | Language | `Docker` | |
-| Branch | `main` | Nhánh chứa code cần chạy |
+| Branch | **`finnal`** | Render điền sẵn `main` = **bản cũ**, phải đổi |
 | Region | **Singapore** | Trùng vùng với database |
 | Root Directory | **để trống** | Dockerfile cần thấy cả `frontend/`, `backend/`, `database/` |
 | Instance Type | `Free` hoặc `Starter` | |
@@ -101,14 +125,18 @@ Không cần `PG_SUPERUSER_URL`: Render đã tạo sẵn user và database.
 | Docker Command | dòng dưới đây |
 | Auto-Deploy | `On Commit`: mỗi lần đẩy code lên nhánh đã chọn thì tự deploy lại |
 
-Docker Command: chép nguyên một dòng.
+Docker Command: xóa hết nội dung cũ trong ô, chép đúng dòng này, không thêm dấu ngoặc kép:
 
-```sh
-/bin/sh -c "python -m app.bootstrap && (python -m app.worker &) && exec uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+```text
+python -m app.khoi_dong
 ```
 
-Ý nghĩa: tạo bảng và chạy migration mới; nạp dữ liệu mẫu nếu CSDL còn trống; bật worker chạy nền; rồi chạy web ở
-đúng cổng Render cấp. Lệnh `CMD` sẵn trong Dockerfile không bật worker và dùng cổng cố định 8000, nên phải điền ô này.
+Lệnh này (file `backend/app/khoi_dong.py`) chạy lần lượt: tạo bảng và migration mới; nạp dữ liệu mẫu nếu CSDL còn
+trống; bật worker chạy nền; rồi chạy web ở đúng cổng Render cấp (`$PORT`). Đây cũng là `CMD` của Dockerfile, nên để
+trống ô vẫn chạy đúng; điền rõ ra để chắc không còn sót lệnh cũ.
+
+**Đừng dùng chuỗi lệnh shell** kiểu `/bin/sh -c "… && (python -m app.worker &) && …"` (bản cũ của hướng dẫn này):
+ô Docker Command của Render không chạy được cú pháp đó, deploy báo `/bin/sh: 4: Syntax error: "(" unexpected`.
 
 **Disk (chỉ gói trả phí)**: bấm **Add Disk**, điền:
 
@@ -158,7 +186,7 @@ Inbound IP), kiểm tra có cho phép IP của máy mình không.
 
 ## 7. Cập nhật và sao lưu
 
-- **Cập nhật code**: đẩy lên nhánh đã chọn, Render tự build và deploy lại. Migration mới
+- **Cập nhật code**: commit rồi `git push origin finnal`, Render tự build và deploy lại. Migration mới
   (`database/migrations/*.sql`) tự áp dụng khi khởi động. Dữ liệu và tài khoản giữ nguyên, không nạp lại dữ liệu mẫu.
 - **Deploy tay / khởi động lại**: trong trang service, nút **Manual Deploy** → *Deploy latest commit* hoặc *Restart service*.
 - **Sao lưu** (bắt buộc với database Free trước khi hết hạn 30 ngày). Từ máy đã cài PostgreSQL 17:
@@ -175,12 +203,57 @@ Inbound IP), kiểm tra có cho phép IP của máy mình không.
 
   Sau đó đổi `DATABASE_URL` của Web Service sang Internal URL mới.
 
-## 8. Xử lý sự cố
+## 8. Render vẫn chạy bản cũ
+
+Làm lần lượt, dừng ở bước tìm ra nguyên nhân.
+
+**Bước A: xem Render đang chạy commit nào.** Mở trang service, vào tab **Events**. Dòng deploy trên cùng có dạng
+`Deploy live for 9bdddae: Slide thuyết trình…`. So mã commit đó với `git log -1 --oneline origin/finnal` (mục 2).
+
+| Events hiển thị | Nghĩa là | Làm tiếp |
+|---|---|---|
+| Trùng commit của `origin/finnal` | Render đã chạy code mới. Lỗi nằm ở địa chỉ đang mở, trình duyệt hoặc dữ liệu | Bước C |
+| `9ef5afd` hoặc `33cea21` | Đang build nhánh `main` hoặc repo cũ | Bước B |
+| Dòng mới nhất là **Deploy failed** | Bản mới build hoặc khởi động lỗi, nên Render **giữ nguyên bản cũ đang chạy** | Bấm vào dòng đó xem log, tra bảng mục 9 |
+| Cũ hơn `origin/finnal`, không có lần deploy nào mới hơn | Code chưa push, hoặc Auto-Deploy đang tắt | `git push origin finnal`, rồi **Manual Deploy → Deploy latest commit** |
+
+**Bước B: sửa repo và nhánh.** Trang service → **Settings** → mục **Build & Deploy**, kiểm tra:
+
+| Ô | Phải là |
+|---|---|
+| Repository | `https://github.com/thangduongworkemail-bot/management-software` |
+| Branch | `finnal` |
+| Root Directory | trống |
+| Dockerfile Path | `./backend/Dockerfile` |
+| Docker Build Context Directory | `.` |
+
+Lưu, rồi bấm **Manual Deploy → Deploy latest commit** và quay lại bước A. Đúng commit mà giao diện vẫn cũ thì
+**Manual Deploy → Clear build cache & deploy**.
+
+**Bước C: Render đã chạy code mới mà trang vẫn cũ.**
+
+- **Mở nhầm địa chỉ.** Service cũ còn chạy thì đang giữ tên `khanhvan.onrender.com`, còn service mới mang hậu tố.
+  Chép địa chỉ hiện ở đầu trang của **service mới**, đừng gõ theo trí nhớ. Service cũ không dùng nữa thì vào
+  Settings của nó → **Suspend Web Service** (hoặc **Delete**) để khỏi nhầm.
+- **Trình duyệt còn giữ giao diện cũ.** PWA lưu sẵn giao diện để chạy offline, nên lần mở đầu sau deploy vẫn hiện bản cũ,
+  vài giây sau tự tải lại sang bản mới. Không tự đổi thì trên máy tính bấm **Ctrl+Shift+R**; vẫn không được thì
+  **F12 → Application → Storage → Clear site data** rồi tải lại. Điện thoại đã cài app: tắt hẳn app rồi mở lại,
+  hoặc gỡ app và cài lại từ trình duyệt. Mở thử bằng tab ẩn danh để biết chắc lỗi có phải do bộ nhớ đệm không.
+- **Dữ liệu cũ.** `DATABASE_URL` vẫn trỏ vào database của service cũ thì máy chủ thấy CSDL đã có dữ liệu và **bỏ qua
+  nạp dữ liệu mẫu**, nên danh mục thiếu 30 mặt hàng gỗ bổ sung. Có hai cách:
+  - giữ dữ liệu cũ, thêm hàng: chạy từ máy mình qua External Database URL như mục 6, nhưng thay lệnh nhập bằng
+    `& $py -m app.hang_mau_bo_sung --xem-truoc` rồi `& $py -m app.hang_mau_bo_sung` (chạy lại không tạo trùng);
+  - dữ liệu sạch: tạo database mới (bước 1), đổi `DATABASE_URL` của Web Service sang Internal URL mới, rồi
+    **Manual Deploy → Deploy latest commit**.
+
+## 9. Xử lý sự cố
 
 | Hiện tượng (trong Logs) | Nguyên nhân / cách sửa |
 |---|---|
 | Build lỗi `COPY failed` / không thấy `frontend/package.json` | Root Directory phải **trống** và Docker Build Context Directory là `.` |
-| Deploy treo rồi báo không thấy cổng mở (*no open ports*) | Docker Command chép thiếu; kiểm tra có `--port $PORT` |
+| `/bin/sh: 4: Syntax error: "(" unexpected`, rồi `Exited with status 2` | Ô Docker Command còn chuỗi lệnh shell cũ. Sửa thành `python -m app.khoi_dong` (mục 4) |
+| `No module named app.khoi_dong` | Render đang build commit cũ chưa có file này. `git push origin finnal`, rồi xem mục 8 |
+| Deploy treo rồi báo không thấy cổng mở (*no open ports*) | Docker Command không phải `python -m app.khoi_dong`, hoặc Render build nhầm nhánh cũ (mục 8) |
 | `could not translate host name "dpg-..."` | Web Service và database khác vùng. Internal URL chỉ dùng được khi cùng vùng: tạo lại một trong hai cho cùng Singapore |
 | `permission denied to create extension` | Vào database → **Connect** → chép lệnh PSQL, chạy `CREATE EXTENSION IF NOT EXISTS unaccent; CREATE EXTENSION IF NOT EXISTS pg_trgm;` rồi **Manual Deploy → Restart service** |
 | Mở trang thấy màn hình chờ khoảng 1 phút | Gói Free đang ngủ và đang khởi động lại, bình thường |

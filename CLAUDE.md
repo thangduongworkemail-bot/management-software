@@ -43,7 +43,7 @@ $py = 'C:\ProgramData\miniconda3\envs\ai_signal\python.exe'; $env:PYTHONIOENCODI
 - Mobile (from `frontend/`, Node 22+): `npm run icons` regenerates every PWA/Android/iOS icon and splash from `public/icon.svg`; `npm run app:sync` builds and copies into `android/` and `ios/` (Capacitor 8, iOS via SPM); `npm run app:android` / `app:ios` also open Android Studio / Xcode. `VITE_MAY_CHU=https://…` bakes a default server into native builds. Details in `HUONG_DAN_APP_DI_DONG.md`.
 - Docker: `docker compose up -d --build` (build context is the repo root; the image builds the PWA and runs `app.bootstrap` on start).
 - Cloudflare Tunnel (the app runs on a local Windows machine, either through a Quick Tunnel from `demo-public.ps1` or a named tunnel with a domain): `HUONG_DAN_DEPLOY_CLOUDFLARE.md`.
-- Render: `HUONG_DAN_DEPLOY_RENDER.md`. A single Docker web service runs the API and the worker together, because a Render disk attaches to only one service and the worker writes files. The Docker Command override binds `$PORT`. Set `TZ=ICT-7`, because `codes.py` uses `date.today()`.
+- Render: `HUONG_DAN_DEPLOY_RENDER.md`. A single Docker web service runs the API and the worker together, because a Render disk attaches to only one service and the worker writes files. The image `CMD` (and the Render Docker Command) is `python -m app.khoi_dong`, which runs bootstrap, starts the worker in the background, then execs uvicorn on `$PORT`. Render's Docker Command field cannot run shell chains like `sh -c "a && (b &) && c"`, so keep that field to a single plain command. Set `TZ=ICT-7`, because `codes.py` uses `date.today()`.
 
 ## Architecture that spans files
 
